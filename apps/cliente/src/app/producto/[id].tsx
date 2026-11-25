@@ -21,6 +21,7 @@ export default function Product() {
   const opts = optionsFor(state.menu, item.id);
   const groups: Array<[OptionKind, string]> = [
     ['tamano', t.choose],
+    ['temperatura', t.temperature],
     ['leche', t.milk],
     ['extra', t.extras],
   ];
@@ -28,7 +29,7 @@ export default function Product() {
   const toggle = (o: ItemOption) => {
     setSelected((cur) => {
       if (o.kind === 'extra') return cur.includes(o.id) ? cur.filter((x) => x !== o.id) : [...cur, o.id];
-      // tamaño y leche: una sola opción del grupo
+      // tamaño, temperatura y leche: una sola opción del grupo
       const sameKind = opts.filter((x) => x.kind === o.kind).map((x) => x.id);
       return [...cur.filter((x) => !sameKind.includes(x)), o.id];
     });

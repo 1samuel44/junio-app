@@ -2,7 +2,7 @@
 // (sin Supabase) y para generar supabase/migrations/*_menu_inicial.sql.
 // Tiene la misma forma que las tablas menu_categories, menu_items e item_options.
 
-export type OptionKind = 'tamano' | 'leche' | 'extra';
+export type OptionKind = 'tamano' | 'temperatura' | 'leche' | 'extra';
 
 export interface MenuCategory {
   id: number;
@@ -119,6 +119,17 @@ const EXTRAS: Array<[string, string, number]> = [
   ['Shot de espresso', 'Espresso shot', 20],
 ];
 
+// Bebidas que se pueden pedir calientes o frías, y cuál sale por defecto
+const HOT_OR_ICED: Record<string, 'caliente' | 'frio'> = {
+  'Latte corto': 'caliente',
+  Latte: 'caliente',
+  Americano: 'caliente',
+  'Dirty chai': 'frio',
+  Matcha: 'caliente',
+  Chai: 'caliente',
+  Chocolate: 'caliente',
+};
+
 function buildOptions(): ItemOption[] {
   const out: ItemOption[] = [];
   let id = 1;
@@ -145,6 +156,18 @@ function buildOptions(): ItemOption[] {
         add({ item_id, kind: 'extra', name_es: es, name_en: en, price_delta: delta, is_default: false }),
       );
     }
+  });
+
+  // Agregadas después del menú inicial (migración *_deslactosada_temperatura.sql).
+  // Van al final para no mover los ids que ya existen en Supabase.
+  rows.forEach(([, , , , , , , , milk], i) => {
+    if (milk) add({ item_id: i + 1, kind: 'leche', name_es: 'Leche deslactosada', name_en: 'Lactose-free milk', price_delta: 0, is_default: false });
+  });
+  rows.forEach(([, name_es], i) => {
+    const temp = HOT_OR_ICED[name_es];
+    if (!temp) return;
+    add({ item_id: i + 1, kind: 'temperatura', name_es: 'Caliente', name_en: 'Hot', price_delta: 0, is_default: temp === 'caliente' });
+    add({ item_id: i + 1, kind: 'temperatura', name_es: 'Frío', name_en: 'Iced', price_delta: 0, is_default: temp === 'frio' });
   });
   return out;
 }

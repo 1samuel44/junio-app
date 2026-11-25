@@ -1,0 +1,31 @@
+-- Leche deslactosada (sin costo extra) en todas las bebidas con leche,
+-- y caliente/frío en las que aplican. Generado desde apps/cliente/src/data/menu.ts.
+insert into item_options (id, item_id, kind, name_es, name_en, price_delta, is_default) values
+  (111, 2, 'leche', 'Leche deslactosada', 'Lactose-free milk', 0, false),
+  (112, 3, 'leche', 'Leche deslactosada', 'Lactose-free milk', 0, false),
+  (113, 4, 'leche', 'Leche deslactosada', 'Lactose-free milk', 0, false),
+  (114, 7, 'leche', 'Leche deslactosada', 'Lactose-free milk', 0, false),
+  (115, 11, 'leche', 'Leche deslactosada', 'Lactose-free milk', 0, false),
+  (116, 12, 'leche', 'Leche deslactosada', 'Lactose-free milk', 0, false),
+  (117, 13, 'leche', 'Leche deslactosada', 'Lactose-free milk', 0, false),
+  (118, 15, 'leche', 'Leche deslactosada', 'Lactose-free milk', 0, false),
+  (119, 16, 'leche', 'Leche deslactosada', 'Lactose-free milk', 0, false),
+  (120, 17, 'leche', 'Leche deslactosada', 'Lactose-free milk', 0, false),
+  (121, 19, 'leche', 'Leche deslactosada', 'Lactose-free milk', 0, false),
+  (122, 20, 'leche', 'Leche deslactosada', 'Lactose-free milk', 0, false),
+  (123, 3, 'temperatura', 'Caliente', 'Hot', 0, true),
+  (124, 3, 'temperatura', 'Frío', 'Iced', 0, false),
+  (125, 4, 'temperatura', 'Caliente', 'Hot', 0, true),
+  (126, 4, 'temperatura', 'Frío', 'Iced', 0, false),
+  (127, 5, 'temperatura', 'Caliente', 'Hot', 0, true),
+  (128, 5, 'temperatura', 'Frío', 'Iced', 0, false),
+  (129, 13, 'temperatura', 'Caliente', 'Hot', 0, false),
+  (130, 13, 'temperatura', 'Frío', 'Iced', 0, true),
+  (131, 15, 'temperatura', 'Caliente', 'Hot', 0, true),
+  (132, 15, 'temperatura', 'Frío', 'Iced', 0, false),
+  (133, 19, 'temperatura', 'Caliente', 'Hot', 0, true),
+  (134, 19, 'temperatura', 'Frío', 'Iced', 0, false),
+  (135, 20, 'temperatura', 'Caliente', 'Hot', 0, true),
+  (136, 20, 'temperatura', 'Frío', 'Iced', 0, false);
+
+select setval('item_options_id_seq', (select max(id) from item_options));
