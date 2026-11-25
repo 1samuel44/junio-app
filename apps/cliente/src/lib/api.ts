@@ -19,6 +19,13 @@ function check<T>(res: { data: T | null; error: { message: string } | null }): T
   return res.data as T;
 }
 
+/** Fecha de Postgres a milisegundos. Postgres manda microsegundos (.755019+00:00), que no todos los motores de JS leen. */
+export function ts(v: string): number {
+  const iso = v.replace(' ', 'T').replace(/(\.\d{3})\d+/, '$1').replace(/\+00(:00)?$/, 'Z');
+  const n = Date.parse(iso);
+  return Number.isNaN(n) ? Date.now() : n;
+}
+
 export async function fetchMenu(): Promise<{ menu: Menu; beans: GuestBeans | null }> {
   const [cats, items, opts, beans] = await Promise.all([
     db().from('menu_categories').select('*').order('sort'),
@@ -45,13 +52,13 @@ export async function fetchCard(): Promise<Card> {
   type S = { source: Card['stamps'][number]['source']; created_at: string; local_day: string };
   type R = { id: string; earned_at: string; expires_at: string; redeemed_at: string | null };
   return {
-    stamps: (check(stamps) as S[]).map((s) => ({ source: s.source, createdAt: Date.parse(s.created_at), localDay: s.local_day })),
+    stamps: (check(stamps) as S[]).map((s) => ({ source: s.source, createdAt: ts(s.created_at), localDay: s.local_day })),
     hadWelcome: true,
     rewards: (check(rewards) as R[]).map((r) => ({
       id: r.id,
-      earnedAt: Date.parse(r.earned_at),
-      expiresAt: Date.parse(r.expires_at),
-      redeemedAt: r.redeemed_at ? Date.parse(r.redeemed_at) : undefined,
+      earnedAt: ts(r.earned_at),
+      expiresAt: ts(r.expires_at),
+      redeemedAt: r.redeemed_at ? ts(r.redeemed_at) : undefined,
     })),
   };
 }
@@ -96,7 +103,7 @@ export async function fetchOrders(): Promise<Order[]> {
       isPaid: o.is_paid,
       rewardId: o.reward_id ?? undefined,
       note: o.note ?? '',
-      createdAt: Date.parse(o.created_at),
+      createdAt: ts(o.created_at),
     };
   });
 }
