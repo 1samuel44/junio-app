@@ -1,0 +1,892 @@
+<title>Junio · Prototipo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,400..900;1,62..125,400..900&family=Permanent+Marker&display=swap">
+<style>
+/* Layout: a working table. The phone (or tablet, or owner desk) sits in the middle; notes for the owner sit beside it. One brand look, bone paper and Junio black, so it stays single-theme on purpose. */
+:root{
+  --negro:#1D1D1B; --hueso:#F1EDE6; --salvia:#9AA98F; --oliva:#A0A082; --crema:#F9ECD2; --salvia-cl:#CED2BB;
+  --linea:#d9d3c8; --tinta-2:#55544f; --ok:#5c7a4f; --alerta:#b5532f;
+  --display:"Archivo","Arial Black",system-ui,sans-serif;
+  --body:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --pincel:"Permanent Marker","Archivo",cursive;
+  color-scheme: light;
+}
+*{box-sizing:border-box}
+html,body{background:var(--hueso);color:var(--negro)}
+body{font-family:var(--body);font-size:15px;line-height:1.45;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--negro);outline-offset:2px}
+input,select,textarea{font:inherit;color:var(--negro)}
+a{color:inherit}
+.logo{display:inline-block;background:currentColor;-webkit-mask:var(--logo) center/contain no-repeat;mask:var(--logo) center/contain no-repeat}
+.logo.full{aspect-ratio:214/144}
+.logo.word{aspect-ratio:214/117;-webkit-mask-size:100% auto;mask-size:100% auto;-webkit-mask-position:top;mask-position:top}
+
+/* ---------- top bar ---------- */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--negro);color:var(--crema);margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding:12px max(16px,env(safe-area-inset-left,0px));display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:21;background:var(--negro)}
+.top .logo{width:74px;color:var(--crema)}
+.top .meta{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--salvia-cl);flex:1;min-width:140px}
+.seg{display:flex;gap:4px;background:#2d2d2a;border-radius:20px;padding:4px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;color:var(--crema);padding:7px 14px;border-radius:999px;font-weight:700;font-size:13px;letter-spacing:.02em}
+.seg button[aria-pressed="true"]{background:var(--salvia);color:var(--negro)}
+
+.wrap{max-width:1240px;margin:0 auto;padding-top:28px}
+.intro{display:flex;gap:24px;align-items:flex-end;flex-wrap:wrap;margin-bottom:22px}
+.intro h1{font-family:var(--display);font-weight:900;font-stretch:72%;text-transform:uppercase;font-size:clamp(30px,5vw,54px);line-height:.92;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.intro p{margin:0;max-width:56ch;color:var(--tinta-2)}
+
+/* ---------- client layout ---------- */
+.stage{display:grid;grid-template-columns:240px minmax(0,auto) minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:1100px){.stage{grid-template-columns:minmax(0,auto) minmax(0,1fr)}.stage .index{grid-column:1/-1;order:3}}
+@media (max-width:760px){.stage{grid-template-columns:minmax(0,1fr)}.stage .notes{order:2}}
+.index h3,.notes h3,.panel h3{font-family:var(--display);font-weight:900;font-stretch:80%;text-transform:uppercase;font-size:13px;letter-spacing:.08em;margin:0 0 10px}
+.index ol{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+@media (max-width:1100px){.index ol{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}}
+.index button{width:100%;text-align:left;border:0;background:transparent;padding:7px 10px;border-radius:8px;display:flex;gap:10px;align-items:baseline;font-size:14px}
+.index button:hover{background:#e6e0d5}
+.index button[aria-current="true"]{background:var(--negro);color:var(--crema)}
+.index .n{font-variant-numeric:tabular-nums;font-size:11px;opacity:.6;width:18px;flex:none}
+.notes{display:grid;gap:18px;min-width:0}
+.note-card{border-top:2px solid var(--negro);padding-top:12px}
+.note-card ul{margin:0;padding-left:18px;display:grid;gap:6px}
+.note-card p{margin:0 0 8px}
+.demo-btns{display:flex;flex-wrap:wrap;gap:8px}
+.chip-btn{border:1.5px solid var(--negro);background:transparent;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600}
+.chip-btn:hover{background:var(--negro);color:var(--crema)}
+.small{font-size:12.5px;color:var(--tinta-2)}
+
+/* ---------- phone ---------- */
+.phone{width:390px;max-width:100%;height:800px;border-radius:46px;background:var(--negro);padding:12px;box-shadow:0 30px 60px -30px rgba(29,29,27,.55);position:relative;justify-self:center}
+.screen{position:relative;height:100%;border-radius:36px;overflow:hidden;background:var(--hueso);display:flex;flex-direction:column}
+@media (max-width:440px){.phone{width:100%;height:760px;padding:0;border-radius:24px;box-shadow:none;background:transparent}.screen{border-radius:24px;border:1.5px solid var(--negro)}}
+.status{height:44px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.status .isl{width:96px;height:26px;border-radius:20px;background:var(--negro)}
+.status.dark{background:var(--negro);color:var(--crema)}
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.pad{padding:8px 20px 24px}
+.tabbar{flex:none;display:grid;grid-template-columns:repeat(5,1fr);align-items:end;padding:8px 8px 22px;background:var(--hueso);border-top:1.5px solid var(--negro)}
+.tabbar button{border:0;background:none;display:grid;justify-items:center;gap:3px;font-size:10.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:4px 0;color:var(--tinta-2)}
+.tabbar button[aria-current="true"]{color:var(--negro)}
+.tabbar svg{width:24px;height:24px}
+.tabbar .mid{transform:translateY(-14px)}
+.tabbar .mid .disc{width:58px;height:58px;border-radius:50%;background:var(--negro);color:var(--crema);display:grid;place-items:center;border:4px solid var(--hueso)}
+.tabbar .mid[aria-current="true"] .disc{background:var(--salvia);color:var(--negro)}
+
+/* type inside the app */
+.h-xl{font-family:var(--display);font-weight:900;font-stretch:72%;text-transform:uppercase;font-size:40px;line-height:.9;margin:0;letter-spacing:-.01em}
+.h-l{font-family:var(--display);font-weight:900;font-stretch:78%;text-transform:uppercase;font-size:26px;line-height:.95;margin:0}
+.h-m{font-family:var(--display);font-weight:800;font-stretch:85%;text-transform:uppercase;font-size:16px;line-height:1.1;margin:0;letter-spacing:.01em}
+.brush{font-family:var(--pincel);font-size:24px;line-height:1;margin:0;text-transform:uppercase;letter-spacing:.01em}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-2)}
+.muted{color:var(--tinta-2)}
+.price{font-family:var(--display);font-weight:800;font-variant-numeric:tabular-nums}
+
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:0;border-radius:14px;padding:15px 18px;font-weight:800;font-size:15px;text-transform:uppercase;letter-spacing:.04em;font-stretch:90%}
+.btn.dark{background:var(--negro);color:var(--crema)}
+.btn.sage{background:var(--salvia);color:var(--negro)}
+.btn.line{background:transparent;border:1.5px solid var(--negro)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;gap:10px;align-items:center}
+.between{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.stack{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
+.pad{min-width:0}.pad>*,.stack>*{min-width:0}
+@media (max-width:560px){.top .meta{display:none}}
+.card{background:#fbf9f5;border:1.5px solid var(--negro);border-radius:18px;padding:16px}
+.card.ink{background:var(--negro);color:var(--crema);border-color:var(--negro)}
+.card.sage{background:var(--salvia-cl);border-color:var(--salvia-cl)}
+.back{border:0;background:none;display:flex;align-items:center;gap:6px;font-weight:700;font-size:14px;padding:6px 0}
+.field{display:grid;gap:6px}
+.field label{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.field input,.field textarea,.field select{border:1.5px solid var(--negro);border-radius:12px;padding:12px 14px;background:#fbf9f5;width:100%}
+.pills{display:flex;gap:8px;flex-wrap:wrap}
+.pill{border:1.5px solid var(--negro);background:transparent;border-radius:999px;padding:8px 14px;font-size:13.5px;font-weight:600}
+.pill[aria-pressed="true"]{background:var(--negro);color:var(--crema)}
+.pill small{opacity:.7;font-weight:500}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;border-radius:6px;padding:3px 7px;background:var(--salvia-cl);color:var(--negro)}
+.tag.ink{background:var(--negro);color:var(--crema)}
+.tag.out{background:transparent;border:1px dashed var(--tinta-2);color:var(--tinta-2)}
+
+/* star decoration from the menu */
+.star{position:absolute;color:var(--salvia);pointer-events:none}
+
+/* ---------- stamps (postage-style) ---------- */
+.stamps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.stamp{--c:var(--salvia-cl);aspect-ratio:4/5;padding:5px;background:radial-gradient(circle at 5px 5px,transparent 3.2px,var(--c) 3.6px) -5px -5px/10px 10px;position:relative}
+.stamp .in{height:100%;background:var(--c);display:grid;place-items:center;position:relative;border:1.5px dashed rgba(29,29,27,.35)}
+.stamp svg{width:58%;height:auto;color:rgba(29,29,27,.28)}
+.stamp .num{position:absolute;bottom:4px;right:6px;font-size:10px;font-weight:800;font-variant-numeric:tabular-nums;color:rgba(29,29,27,.45)}
+.stamp.on{--c:var(--salvia)}
+.stamp.on .in{border:1.5px solid var(--negro)}
+.stamp.on svg{color:var(--negro)}
+.stamp.on .num{color:var(--negro)}
+.stamp.free{--c:var(--negro)}
+.stamp.free .in{border:1.5px solid var(--crema);color:var(--crema);text-align:center}
+.stamp.free .in b{font-family:var(--display);font-weight:900;font-stretch:70%;font-size:15px;line-height:.95;text-transform:uppercase;display:block}
+.stamp.free .in span{font-size:9px;letter-spacing:.1em;text-transform:uppercase;opacity:.8}
+.stamp.pop{animation:pop .7s cubic-bezier(.2,1.6,.4,1)}
+.stamp.pop .in::after{content:"";position:absolute;inset:-6px;border:2px solid var(--negro);border-radius:50%;transform:rotate(-12deg);animation:ink .7s ease-out forwards}
+@keyframes pop{0%{transform:scale(1.5) rotate(-10deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes ink{0%{opacity:.8;transform:scale(.6)}100%{opacity:0;transform:scale(1.3)}}
+@media (prefers-reduced-motion:reduce){.stamp.pop,.stamp.pop .in::after,.toast,.push{animation:none!important}}
+
+.meter{height:8px;border-radius:99px;background:var(--salvia-cl);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--negro);border-radius:99px}
+
+/* QR */
+.qrbox{background:#fff;border:1.5px solid var(--negro);border-radius:18px;padding:16px;display:grid;justify-items:center;gap:10px}
+.qrbox svg.qr{width:190px;height:190px}
+.ring{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.ring svg{width:22px;height:22px;transform:rotate(-90deg)}
+
+/* menu list */
+.cats{display:flex;gap:8px;overflow-x:auto;padding:4px 20px 10px;margin:0 -20px;scrollbar-width:none}
+.cats::-webkit-scrollbar{display:none}
+.cats .pill{white-space:nowrap}
+.item{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:14px 0;border-bottom:1px solid var(--linea);text-align:left;background:none;border-left:0;border-right:0;border-top:0;width:100%}
+.item .nm{font-weight:800;text-transform:uppercase;font-stretch:88%;font-size:15.5px;letter-spacing:.01em}
+.item .sz{font-weight:600;font-size:12px;color:var(--tinta-2);margin-left:6px;text-transform:none}
+.item .ds{grid-column:1;font-size:13px;color:var(--tinta-2)}
+.item .tags{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap}
+.item[disabled]{opacity:.45;cursor:not-allowed}
+
+/* cup label (stamp-style sticker) */
+.label{border:1.5px solid var(--negro);border-radius:6px;background:var(--crema);padding:12px 14px;position:relative}
+.label::before,.label::after{content:"";position:absolute;top:50%;width:14px;height:14px;border-radius:50%;background:var(--hueso);border:1.5px solid var(--negro);transform:translateY(-50%)}
+.label::before{left:-8px;clip-path:inset(0 0 0 50%)}
+.label::after{right:-8px;clip-path:inset(0 50% 0 0)}
+
+.steps{display:grid;gap:0}
+.stepi{display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:start;padding-bottom:14px;position:relative}
+.stepi .dot{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--negro);display:grid;place-items:center;background:var(--hueso);font-size:12px;font-weight:800;z-index:1}
+.stepi.done .dot{background:var(--negro);color:var(--crema)}
+.stepi.now .dot{background:var(--salvia)}
+.stepi:not(:last-child)::before{content:"";position:absolute;left:13.25px;top:28px;bottom:0;width:1.5px;background:var(--negro)}
+.stepi b{display:block;font-size:14px;text-transform:uppercase;letter-spacing:.03em}
+
+.list-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 0;border-bottom:1px solid var(--linea);background:none;border-left:0;border-right:0;border-top:0;width:100%;text-align:left;font-size:14.5px}
+.toggle{width:44px;height:26px;border-radius:99px;border:1.5px solid var(--negro);background:var(--salvia-cl);position:relative;flex:none;padding:0}
+.toggle::after{content:"";position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;background:var(--negro);transition:left .15s}
+.toggle[aria-checked="true"]{background:var(--salvia)}
+.toggle[aria-checked="true"]::after{left:20px}
+
+.toast{position:absolute;left:14px;right:14px;bottom:96px;background:var(--negro);color:var(--crema);border-radius:14px;padding:12px 14px;font-size:13.5px;font-weight:600;z-index:30;animation:up .3s ease-out}
+.push{position:absolute;left:10px;right:10px;top:48px;background:rgba(251,249,245,.97);border:1.5px solid var(--negro);border-radius:18px;padding:10px 12px;display:grid;grid-template-columns:36px 1fr;gap:10px;z-index:31;animation:down .35s ease-out;box-shadow:0 12px 30px -16px rgba(0,0,0,.5)}
+.push .ic{width:36px;height:36px;border-radius:9px;background:var(--negro);display:grid;place-items:center}
+.push .ic .logo{width:28px;color:var(--crema)}
+.push b{font-size:13px}.push p{margin:0;font-size:13px}
+@keyframes up{from{transform:translateY(12px);opacity:0}}
+@keyframes down{from{transform:translateY(-16px);opacity:0}}
+.sheet{position:absolute;inset:0;background:rgba(29,29,27,.45);z-index:40;display:flex;align-items:flex-end}
+.sheet .body{background:var(--hueso);width:100%;border-radius:24px 24px 0 0;padding:20px 20px 30px;display:grid;gap:12px}
+
+.codebox{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.codebox input{text-align:center;font-weight:800;font-size:20px;border:1.5px solid var(--negro);border-radius:10px;padding:12px 0;background:#fbf9f5;width:100%;min-width:0}
+
+/* ---------- tablet (barista) ---------- */
+.tablet{background:var(--negro);border-radius:30px;padding:14px;max-width:1080px;margin:0 auto;box-shadow:0 30px 60px -30px rgba(29,29,27,.55)}
+.tablet .screen{border-radius:18px;min-height:640px;height:auto}
+@media (max-width:640px){.tablet{padding:0;background:transparent;box-shadow:none}.tablet .screen{border:1.5px solid var(--negro)}}
+.bar-top{background:var(--negro);color:var(--crema);display:flex;align-items:center;gap:14px;padding:12px 18px;flex-wrap:wrap}
+.bar-top .logo{width:58px;color:var(--crema)}
+.bar-top .seg button{font-size:12.5px}
+.bar-body{padding:18px;flex:1}
+.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:820px){.cols{grid-template-columns:minmax(0,1fr)}}
+.col{background:#e9e4da;border-radius:16px;padding:12px;display:grid;gap:10px;align-content:start;min-height:160px}
+.col h4{margin:0;display:flex;justify-content:space-between;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.ticket{background:var(--crema);border:1.5px solid var(--negro);border-radius:10px;padding:12px;display:grid;gap:8px}
+.ticket.new{box-shadow:0 0 0 3px var(--salvia)}
+.ticket ul{margin:0;padding-left:16px;font-size:13.5px}
+.ticket .who{font-family:var(--display);font-weight:900;font-stretch:78%;text-transform:uppercase;font-size:19px;line-height:1}
+.scan{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:18px}
+@media (max-width:820px){.scan{grid-template-columns:minmax(0,1fr)}}
+.viewfinder{background:#222220;border-radius:18px;aspect-ratio:4/3;display:grid;place-items:center;position:relative;overflow:hidden;color:var(--crema)}
+.viewfinder .frame{width:52%;aspect-ratio:1;border:3px solid var(--salvia);border-radius:18px;position:relative}
+.viewfinder .laser{position:absolute;left:8%;right:8%;height:2px;background:var(--salvia);top:50%;box-shadow:0 0 12px var(--salvia);animation:laser 2s ease-in-out infinite alternate}
+@keyframes laser{from{top:12%}to{top:88%}}
+@media (prefers-reduced-motion:reduce){.viewfinder .laser{animation:none}}
+
+/* ---------- owner desk ---------- */
+.desk{background:#fbf9f5;border:1.5px solid var(--negro);border-radius:20px;overflow:hidden}
+.desk-top{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1.5px solid var(--negro);flex-wrap:wrap}
+.desk-top .logo{width:70px}
+.desk-grid{display:grid;grid-template-columns:200px minmax(0,1fr);min-height:620px}
+@media (max-width:820px){.desk-grid{grid-template-columns:minmax(0,1fr)}}
+.side{border-right:1.5px solid var(--negro);padding:14px;display:grid;gap:4px;align-content:start}
+@media (max-width:820px){.side{border-right:0;border-bottom:1.5px solid var(--negro);display:flex;flex-wrap:wrap}}
+.side button{border:0;background:none;text-align:left;padding:9px 12px;border-radius:10px;font-weight:600}
+.side button[aria-current="true"]{background:var(--negro);color:var(--crema)}
+.desk-main{padding:20px;display:grid;gap:20px;align-content:start;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{border:1.5px solid var(--negro);border-radius:14px;padding:14px;background:var(--hueso)}
+.kpi .v{font-family:var(--display);font-weight:900;font-stretch:75%;font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:700}
+.tbl-wrap{overflow-x:auto;border:1.5px solid var(--negro);border-radius:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:640px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--linea);vertical-align:middle}
+th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;background:var(--hueso);position:sticky;top:0}
+td input.price-in{width:76px;border:1.5px solid var(--linea);border-radius:8px;padding:5px 8px;background:#fff;font-variant-numeric:tabular-nums}
+.alert{border-left:4px solid var(--alerta);background:#f6e7df;padding:10px 14px;border-radius:0 10px 10px 0;font-size:13.5px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+@media (max-width:900px){.two{grid-template-columns:minmax(0,1fr)}}
+
+/* ---------- stack doc ---------- */
+.doc{max-width:860px;display:grid;gap:26px}
+.doc h2{font-family:var(--display);font-weight:900;font-stretch:75%;text-transform:uppercase;font-size:28px;line-height:1;margin:0 0 10px}
+.doc p{margin:0 0 10px;max-width:68ch}
+.verdict{background:var(--negro);color:var(--crema);border-radius:20px;padding:22px;display:grid;gap:14px;position:relative;overflow:hidden}
+.verdict .big{font-family:var(--display);font-weight:900;font-stretch:70%;text-transform:uppercase;font-size:clamp(28px,5vw,44px);line-height:.95}
+.verdict .big em{font-style:normal;color:var(--salvia)}
+.doc table{min-width:560px}
+.doc ul{margin:0;padding-left:20px;display:grid;gap:8px;max-width:70ch}
+</style>
+
+<header class="top">
+  <span class="logo word" aria-label="Junio"></span>
+  <span class="meta">Prototipo clicable · semanas 2 y 3</span>
+  <nav class="seg" aria-label="Vista">
+    <button data-view="cliente">App de clientes</button>
+    <button data-view="barista">App de barra</button>
+    <button data-view="dueno">Panel del dueño</button>
+    <button data-view="stack">Tecnología</button>
+  </nav>
+</header>
+<main class="wrap" id="app"></main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+document.documentElement.style.setProperty('--logo','url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjUgMzYgMjE0IDE0NCIgd2lkdGg9IjIxNCIgaGVpZ2h0PSIxNDQiPgo8cGF0aCBmaWxsLXJ1bGU9Im5vbnplcm8iIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iMSIgZD0iTSAxMTMuOTQ1MzEyIDg5LjczODI4MSBDIDExMy4yMTg3NSA4OS4wNDY4NzUgMTExLjY1MjM0NCA4OS41MzEyNSAxMTEuMDMxMjUgOTAuMTY0MDYyIEMgMTA5Ljk2MDkzOCA5MS4yNjE3MTkgMTA4LjM4NjcxOSA5NS45MDYyNSAxMDguMDkzNzUgOTcuNDgwNDY5IEMgMTA1LjkzNzUgMTA5LjA5Mzc1IDEwNy41NzAzMTIgMTIxLjA0Njg3NSAxMDYuMzM5ODQ0IDEzMi42ODc1IEMgMTA1LjY2NDA2MiAxMzkuMDQ2ODc1IDEwNC4xMTMyODEgMTQ2LjM5MDYyNSA5Ny40MDIzNDQgMTQ4LjU1ODU5NCBDIDg4LjU0Mjk2OSAxNTEuNDIxODc1IDgxLjY0NDUzMSAxNTAuOTA2MjUgNzIuNjc1NzgxIDE0OC45NzI2NTYgQyA2NS4yMTg3NSAxNDcuMzY3MTg4IDYxLjQ0OTIxOSAxNDYuNjMyODEyIDYwLjEwMTU2MiAxMzguNDA2MjUgQyA1OC4yMTg3NSAxMjYuODYzMjgxIDU4LjU3MDMxMiAxMTIuNjUyMzQ0IDU4LjE3MTg3NSAxMDAuNzUzOTA2IEMgNTcuNjA1NDY5IDg0LjAwMzkwNiA1Ni4xMjg5MDYgNjQuMTg3NSA1OC4xOTE0MDYgNDcuNjIxMDk0IEMgNTguNzUgNDMuMTE3MTg4IDU4LjgzOTg0NCA0Mi4zNDM3NSA2My40MDIzNDQgNDEuMzgyODEyIEMgNjcuMzI0MjE5IDQwLjU1NDY4OCA3My44NTkzNzUgMzkuOTg4MjgxIDc3LjY0ODQzOCA0MS4yMzQzNzUgQyA4MC40Mjk2ODggNDIuMTQ0NTMxIDc5Ljk1MzEyNSA0NC4xNjQwNjIgNzkuODg2NzE5IDQ2LjY0NDUzMSBDIDc5LjQ4ODI4MSA2MS40NjQ4NDQgNzcuNzE0ODQ0IDc3LjExNzE4OCA3OS45MTc5NjkgOTEuOTAyMzQ0IEMgODAuMjk2ODc1IDk0LjQzMzU5NCA4MS4xNTYyNSA5OC42MTMyODEgODMuMTIxMDk0IDEwMC4zODY3MTkgQyA4NC42MDE1NjIgMTAxLjcyNjU2MiA4Ny44NTE1NjIgMTAwLjIzMDQ2OSA4OC41NzAzMTIgOTguNDgwNDY5IEMgOTAuMTU2MjUgODkuNTQyOTY5IDkzLjczNDM3NSA4MS4xMDE1NjIgOTMuNDkyMTg4IDcxLjg5ODQzOCBDIDkzLjIxODc1IDYxLjU4OTg0NCA4OS4zMTY0MDYgNDQuMTcxODc1IDEwMi4zNjcxODggNDAuMDE1NjI1IEMgMTA3LjExMzI4MSAzOC41MDM5MDYgMTE3LjUyNzM0NCAzOC40NjQ4NDQgMTIyLjI0MjE4OCA0MC4wNzgxMjUgQyAxMjguNSA0Mi4yMTQ4NDQgMTMyLjg4MjgxMiA1NC41MjM0MzggMTMzLjk3NjU2MiA2MC41NDI5NjkgQyAxMzUuNzc3MzQ0IDcwLjQyOTY4OCAxMzUuNzQyMTg4IDgxLjQxMDE1NiAxMzUuNDk2MDk0IDkxLjQ3NjU2MiBDIDEzNS4wOTM3NSAxMDcuODI4MTI1IDEzNS4zMzIwMzEgMTI0LjI2NTYyNSAxMzMuODA4NTk0IDE0MC41ODIwMzEgQyAxMzMuNTc4MTI1IDE0My4wODk4NDQgMTMzLjI2NTYyNSAxNDUuODQ3NjU2IDEzMC43NjU2MjUgMTQ3LjA3ODEyNSBDIDEyOC4xNjQwNjIgMTQ4LjM1OTM3NSAxMjIuMDgyMDMxIDE0OC41MzkwNjIgMTE5LjU2NjQwNiAxNDcuMTkxNDA2IEMgMTE0Ljk3MjY1NiAxNDQuNzMwNDY5IDExNS44NDM3NSAxMzkuNTU0Njg4IDExNS45MTc5NjkgMTM1LjEwMTU2MiBDIDExNi4xNDQ1MzEgMTIxLjIxNDg0NCAxMTguMzM5ODQ0IDEwNC43OTI5NjkgMTE0LjYwNTQ2OSA5MS4zMzk4NDQgQyAxMTQuNTExNzE5IDkxIDExNC4xNDQ1MzEgODkuOTI1NzgxIDExMy45NDUzMTIgODkuNzM4MjgxICIvPgo8cGF0aCBmaWxsLXJ1bGU9Im5vbnplcm8iIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iMSIgZD0iTSAxOTMuNjMyODEyIDU3LjU3NDIxOSBDIDE5MS4xOTUzMTIgNTcuNjc5Njg4IDE4OS41MzUxNTYgNTkuMTk1MzEyIDE4OC41OTM3NSA2MS4zMDg1OTQgQyAxODYuNDU3MDMxIDY2LjA5Mzc1IDE4NS41OTc2NTYgNzkuNDQ5MjE5IDE4Ni4wODIwMzEgODQuNzg1MTU2IEMgMTg2LjY3MTg3NSA5MS4yNzM0MzggMTk1LjQ2ODc1IDk0LjI1MzkwNiAyMDAuMDE1NjI1IDkwLjEyODkwNiBDIDIwNC40NTMxMjUgODYuMDk3NjU2IDIwMy4yNzM0MzggNzkuNTA3ODEyIDIwMy4wMjM0MzggNzQuMjkyOTY5IEMgMjAyLjY4MzU5NCA2Ny4xMjg5MDYgMjA0LjE4NzUgNTcuMTA1NDY5IDE5My42MzI4MTIgNTcuNTc0MjE5IE0gMTkwLjc4OTA2MiA0MS44MDQ2ODggQyAxOTQuOTkyMTg4IDQxLjE5OTIxOSAyMDIuMTY3OTY5IDQyLjcxNDg0NCAyMDUuNjI4OTA2IDQ1LjIyNjU2MiBDIDIxNy4yMzgyODEgNTMuNjQ4NDM4IDIxNS41IDY4LjI4MTI1IDIxNS44OTg0MzggODAuOTg0Mzc1IEMgMjE2LjIwMzEyNSA5MC43MDcwMzEgMjE2LjQ4NDM3NSAxMDAuNTQyOTY5IDIxNi42MzY3MTkgMTEwLjI5Mjk2OSBDIDIxNi44MzIwMzEgMTIyLjk1NzAzMSAyMTcuODcxMDk0IDEzMi40Mjk2ODggMjA5LjIxODc1IDE0Mi43MjI2NTYgQyAyMDMuMDk3NjU2IDE1MC4wMDc4MTIgMTkzLjUyNzM0NCAxNDguNzQ2MDk0IDE4NS4wMzUxNTYgMTQ3LjM0NzY1NiBDIDE3OC45ODQzNzUgMTQ2LjM1MTU2MiAxNzMuMzA0Njg4IDE0Mi45NTcwMzEgMTcxLjgyODEyNSAxMzYuNjk5MjE5IEMgMTY4LjU0Mjk2OSAxMjIuNzUgMTcyLjIzMDQ2OSAxMDAuMzEyNSAxNzMuOTM3NSA4NS43Njk1MzEgQyAxNzUuMTQwNjI1IDc1LjUwMzkwNiAxNzUuOTAyMzQ0IDY0LjYwNTQ2OSAxNzguNTU4NTk0IDU0LjYyMTA5NCBDIDE4MC4yNSA0OC4yNSAxODMuNzYxNzE5IDQyLjgxNjQwNiAxOTAuNzg5MDYyIDQxLjgwNDY4OCAiLz4KPHBhdGggZmlsbC1ydWxlPSJub256ZXJvIiBmaWxsPSIjMDAwIiBmaWxsLW9wYWNpdHk9IjEiIGQ9Ik0gNDIuMzI4MTI1IDE0Ni4zNDM3NSBDIDMzLjY3NTc4MSAxNTQuOTIxODc1IDE3LjQ2MDkzOCAxNDkuODg2NzE5IDE0LjEyNSAxMzguNTU4NTk0IEMgMTAuODEyNSAxMjcuMzAwNzgxIDkuMzIwMzEyIDExNi40ODQzNzUgOC4yODUxNTYgMTA0LjgxNjQwNiBDIDcuNDY0ODQ0IDk1LjU4MjAzMSA2LjY2Nzk2OSA4Ni40MTAxNTYgOC4wODIwMzEgNzcuMTk1MzEyIEMgOC4zNTkzNzUgNzUuNDAyMzQ0IDguODk4NDM4IDcxLjA3ODEyNSAxMC4wNzAzMTIgNjkuODgyODEyIEMgMTEuMzUxNTYyIDY4LjU4MjAzMSAxNC45NzY1NjIgNjguMDQyOTY5IDE2Ljc1NzgxMiA2Ny45ODA0NjkgQyAyNC4xNjc5NjkgNjcuNzE0ODQ0IDIyLjc4MTI1IDc2LjE5OTIxOSAyMy4zMjAzMTIgODEuMjA3MDMxIEMgMjMuODc4OTA2IDg2LjQxMDE1NiAyNC4zNzEwOTQgOTIuNzIyNjU2IDI2LjYxNzE4OCA5Ny40NjQ4NDQgQyAyNy4zOTA2MjUgOTkuMTAxNTYyIDI3Ljk2ODc1IDEwMC41NzQyMTkgMzAuMDE1NjI1IDk5LjU4MjAzMSBDIDMyLjM1MTU2MiA5OC40NDkyMTkgMzIuMjE0ODQ0IDkzLjcyMjY1NiAzMi4xNTYyNSA5MS40NTMxMjUgQyAzMi4wNzgxMjUgODguMjM4MjgxIDMxLjgyMDMxMiA4NC45MTQwNjIgMzEuNjc5Njg4IDgxLjY3OTY4OCBDIDMxLjEzNjcxOSA2OS4yNzczNDQgMjkuNTk3NjU2IDU2Ljk0NTMxMiAyOS43NzczNDQgNDQuNTAzOTA2IEMgMjkuOTk2MDk0IDQzLjY1NjI1IDMwLjQ0OTIxOSA0Mi43OTY4NzUgMzEuMjk2ODc1IDQyLjQ0NTMxMiBDIDM0LjM0NzY1NiA0MS4xNzU3ODEgNDMuNzQyMTg4IDQxLjE5OTIxOSA0Ni45NDkyMTkgNDIuMTAxNTYyIEMgNDcuNzc3MzQ0IDQyLjMzMjAzMSA0OS4wNTA3ODEgNDIuODgyODEyIDQ5LjM4NjcxOSA0My43MTg3NSBDIDQ5Ljg5MDYyNSA0NC45NjQ4NDQgNDkuNTA3ODEyIDQ5LjAzOTA2MiA0OS41NTg1OTQgNTAuNjk5MjE5IEMgNTAuMDc4MTI1IDY2LjgyMDMxMiA1MC4wODIwMzEgODIuOTQ1MzEyIDUwLjI3MzQzOCA5OS4xMDU0NjkgQyA1MC40Mzc1IDExMi42OTkyMTkgNTIuODk0NTMxIDEzNS44NjMyODEgNDIuMzI4MTI1IDE0Ni4zNDM3NSAiLz4KPHBhdGggZmlsbC1ydWxlPSJub256ZXJvIiBmaWxsPSIjMDAwIiBmaWxsLW9wYWNpdHk9IjEiIGQ9Ik0gMTYwLjIxODc1IDE0My4yNDIxODggQyAxNTguMDQ2ODc1IDE0NS40NDkyMTkgMTUxLjY2NDA2MiAxNDUuNTMxMjUgMTQ4Ljc1IDE0NC45NzY1NjIgQyAxNDIuNDIxODc1IDE0My43NzM0MzggMTQyLjEyMTA5NCAxMzcuNzM0Mzc1IDE0MS42OTE0MDYgMTMyLjQ3MjY1NiBDIDE0MS4zMjAzMTIgMTI3LjkzNzUgMTQxLjcwMzEyNSAxMjMuMzk4NDM4IDE0MS40NjA5MzggMTE4Ljg3NSBDIDE0MS4yNSAxMTUuMDA3ODEyIDE0MC44MDA3ODEgMTExLjY1MjM0NCAxNDAuNzQ2MDk0IDEwNy42ODc1IEMgMTQwLjY1MjM0NCAxMDEuMzI0MjE5IDEzOS45ODA0NjkgOTQuMzk0NTMxIDE0MC4yNDYwOTQgODguMTE3MTg4IEMgMTQwLjcyMjY1NiA3Ni44NTE1NjIgMTQyLjMzOTg0NCA2NS4xOTE0MDYgMTQyLjg5MDYyNSA1My44MDA3ODEgQyAxNDMuMTAxNTYyIDQ5LjQ0MTQwNiAxNDEuNTExNzE5IDQ1LjMxMjUgMTQ1Ljc2NTYyNSA0Mi42MDE1NjIgQyAxNTIuNjk1MzEyIDM4LjE4MzU5NCAxNjQuNTQ2ODc1IDQxLjA4OTg0NCAxNjguMTQ0NTMxIDQ4LjU3ODEyNSBDIDE3NC45NTMxMjUgNjIuNzUgMTY4LjQ0MTQwNiA4Ny4yNTc4MTIgMTY2Ljk4ODI4MSAxMDIuNjc1NzgxIEMgMTY1LjgzOTg0NCAxMTQuODU1NDY5IDE2NS44OTA2MjUgMTI2Ljk1NzAzMSAxNjIuMzMyMDMxIDEzOC43OTY4NzUgQyAxNjEuOTAyMzQ0IDE0MC4yMjI2NTYgMTYxLjI3NzM0NCAxNDIuMTY3OTY5IDE2MC4yMTg3NSAxNDMuMjQyMTg4ICIvPgo8cGF0aCBmaWxsLXJ1bGU9Im5vbnplcm8iIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iMSIgZD0iTSA4My41ODk4NDQgMTY3LjkyMTg3NSBDIDgzLjgzNTkzOCAxNjcuNDMzNTk0IDgzLjM2NzE4OCAxNjYuOTkyMTg4IDgzLjI0NjA5NCAxNjcuMjI2NTYyIEMgODIuOTk2MDk0IDE2Ny43MTg3NSA4My40Njg3NSAxNjguMTYwMTU2IDgzLjU4OTg0NCAxNjcuOTIxODc1IE0gNzMuODQzNzUgMTczLjQ5NjA5NCBDIDc2LjU2MjUgMTczLjIxMDkzOCA4MC41NzAzMTIgMTY4LjYyODkwNiA4MC44MjAzMTIgMTY2LjAxMTcxOSBDIDgwLjkzMzU5NCAxNjQuODE2NDA2IDgwLjYzNjcxOSAxNjIuODMyMDMxIDc5LjA3MDMxMiAxNjMuNTU4NTk0IEMgNzcuOTY0ODQ0IDE2NC4wNjY0MDYgNzMuMzk0NTMxIDE3My4wNTQ2ODggNzMuODQzNzUgMTczLjQ5NjA5NCBNIDg1LjMzNTkzOCAxNzMuMTQ0NTMxIEMgODYuMTQwNjI1IDE3My45ODA0NjkgODkuMTA5Mzc1IDE2OS44NDM3NSA4OS44NjMyODEgMTY5LjUgQyA5MS4yMjI2NTYgMTY4Ljg3ODkwNiA5Mi40NjQ4NDQgMTY5LjE5OTIxOSA5Mi4yOTI5NjkgMTcwLjg1NTQ2OSBDIDkyLjExMzI4MSAxNzIuNTM5MDYyIDg3LjY3MTg3NSAxNzUuODEyNSA4NS44NDc2NTYgMTc1Ljk0NTMxMiBDIDgxLjgwMDc4MSAxNzYuMjM4MjgxIDgxLjc5Njg3NSAxNzQuMzA4NTk0IDgyLjExNzE4OCAxNzEuMTQ0NTMxIEMgODIuMTY3OTY5IDE3MC42Mjg5MDYgODIuNDgwNDY5IDE3MC4yMzQzNzUgODEuNjgzNTk0IDE3MC4zNjMyODEgQyA4MC4xMDU0NjkgMTcyLjY4MzU5NCA3My41OTc2NTYgMTc4LjM3ODkwNiA3MC44NjMyODEgMTc1Ljk1MzEyNSBDIDcwLjE0NDUzMSAxNzUuMzE2NDA2IDcwLjMwMDc4MSAxNzQuNjYwMTU2IDcwLjUxOTUzMSAxNzMuODM1OTM4IEMgNzEuMDE1NjI1IDE3MS45ODA0NjkgNzQuNjk5MjE5IDE2NC43MTg3NSA3NS45Mjk2ODggMTYzLjIxODc1IEMgNzkuMzM1OTM4IDE1OS4wNzgxMjUgODQuNDE3OTY5IDE2MS44MDA3ODEgODMuNTkzNzUgMTY2Ljg3NSBDIDg0LjEwNTQ2OSAxNjcuNTIzNDM4IDg1LjQxNzk2OSAxNjQuNTg5ODQ0IDg1LjY3OTY4OCAxNjQuMjY1NjI1IEMgODcuMzcxMDk0IDE2Mi4xODM1OTQgODkuOTE0MDYyIDE1OS40Mzc1IDkyLjYzNjcxOSAxNjEuNDg4MjgxIEMgOTQuOTY0ODQ0IDE2My4yNDIxODggOTIuOTA2MjUgMTY2LjgxNjQwNiA5MC41NjY0MDYgMTY3LjQxMDE1NiBDIDg5LjQ2MDkzOCAxNjcuNjk1MzEyIDg4LjAzNTE1NiAxNjcuMzA4NTk0IDg3LjIxODc1IDE2Ny44OTQ1MzEgQyA4Ni42MTcxODggMTY4LjMzMjAzMSA4NC44MzU5MzggMTcyLjYzMjgxMiA4NS4zMzU5MzggMTczLjE0NDUzMSAiLz4KPHBhdGggZmlsbC1ydWxlPSJub256ZXJvIiBmaWxsPSIjMDAwIiBmaWxsLW9wYWNpdHk9IjEiIGQ9Ik0gMTM2LjgzOTg0NCAxNjMuOTE3OTY5IEMgMTM1LjUxNTYyNSAxNjQuMDM5MDYyIDEzNC40ODQzNzUgMTY0Ljk2MDkzOCAxMzQuNzUzOTA2IDE2Ni4zNTU0NjkgQyAxMzYuNDQ5MjE5IDE2Ni40NjA5MzggMTM2Ljk1NzAzMSAxNjUuNTAzOTA2IDEzNi44Mzk4NDQgMTYzLjkxNzk2OSBNIDEyNS4wMDM5MDYgMTY5LjQ5MjE4OCBDIDEyNS45MjU3ODEgMTY5LjUyMzQzOCAxMjYuNDQ5MjE5IDE2OS42ODc1IDEyNy4wNTA3ODEgMTY4LjkyOTY4OCBDIDEyNy4zNTE1NjIgMTY4LjU1NDY4OCAxMjkuNDQ5MjE5IDE2NC4zMDA3ODEgMTI5LjQ3MjY1NiAxNjQuMDI3MzQ0IEMgMTI5LjU1MDc4MSAxNjMuMjAzMTI1IDEyOC40Mzc1IDE2Mi42OTkyMTkgMTI3LjY4MzU5NCAxNjIuOTE3OTY5IEMgMTI2LjgyMDMxMiAxNjMuMTY3OTY5IDEyNC41NDI5NjkgMTY5LjAzNTE1NiAxMjUuMDAzOTA2IDE2OS40OTIxODggTSAxMzEuOTY4NzUgMTY0LjYxMzI4MSBDIDEzMi41MzkwNjIgMTY1LjI4OTA2MiAxMzUuNzkyOTY5IDE1OS45NTcwMzEgMTM4LjU4MjAzMSAxNjEuMzA0Njg4IEMgMTQwLjE0NDUzMSAxNjIuMDU4NTk0IDEzOS42OTE0MDYgMTY1LjE2NDA2MiAxMzguNzc3MzQ0IDE2Ni4zNzg5MDYgQyAxMzcuNTYyNSAxNjcuOTkyMTg4IDEzNC4yNTM5MDYgMTY4LjEwMTU2MiAxMzMuNzc3MzQ0IDE2OS4wMzUxNTYgQyAxMzMuMjgxMjUgMTcwLjAwNzgxMiAxMzMuMzYzMjgxIDE3Mi4xNjQwNjIgMTMzLjAxMTcxOSAxNzMuMzIwMzEyIEMgMTM0LjU1ODU5NCAxNzMuNTI3MzQ0IDEzNC42NDg0MzggMTcxLjY0NDUzMSAxMzYuMzA4NTk0IDE3MS45MTAxNTYgQyAxMzguNzIyNjU2IDE3Mi4yOTY4NzUgMTM2LjA2NjQwNiAxNzYuMjY5NTMxIDEzMy41NTQ2ODggMTc2LjA5NzY1NiBDIDEzMi45OTIxODggMTc2LjA1ODU5NCAxMzAuOTI5Njg4IDE3NSAxMzAuNTYyNSAxNzQuNTU0Njg4IEMgMTI5LjE1NjI1IDE3Mi44Mzk4NDQgMTMwLjgzOTg0NCAxNzAuMzgyODEyIDEzMC4zOTg0MzggMTY4LjQ0MTQwNiBDIDEyOS4wMTE3MTkgMTY5LjAzOTA2MiAxMjguODIwMzEyIDE3MS4wNDY4NzUgMTI3LjM1MTU2MiAxNzEuNjY0MDYyIEMgMTI2LjE0ODQzOCAxNzIuMTcxODc1IDEyNC41ODU5MzggMTcxLjYwMTU2MiAxMjMuNzUzOTA2IDE3Mi4yNDYwOTQgQyAxMjMuMDg5ODQ0IDE3Mi43NTc4MTIgMTIzLjA0Njg3NSAxNzQuNTY2NDA2IDEyMi4xOTkyMTkgMTc1LjIxNDg0NCBDIDEyMS4xMzY3MTkgMTc2LjAyNzM0NCAxMTkuMzE2NDA2IDE3NS45MDYyNSAxMTkuNDg4MjgxIDE3NC4yODUxNTYgQyAxMTkuNjU2MjUgMTcyLjY3OTY4OCAxMjIuNDkyMTg4IDE2OC4xMTMyODEgMTIzLjMyNDIxOSAxNjYuMjQyMTg4IEMgMTI0Ljk3MjY1NiAxNjIuNTQ2ODc1IDEyMy43NTM5MDYgMTYwLjUxNTYyNSAxMjkuMDA3ODEyIDE2MS4xMzI4MTIgQyAxMzEuMTcxODc1IDE2MS4zODY3MTkgMTMyLjMyMDMxMiAxNjIuMzAwNzgxIDEzMS45Njg3NSAxNjQuNjEzMjgxICIvPgo8cGF0aCBmaWxsLXJ1bGU9Im5vbnplcm8iIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iMSIgZD0iTSAxNjguODc1IDE3Mi42MjUgQyAxNzEuMDIzNDM4IDE3Mi40NTMxMjUgMTcyLjc2NTYyNSAxNzIuNjc1NzgxIDE3NC43ODkwNjIgMTczLjMyNDIxOSBDIDE3NS41MzkwNjIgMTcxLjE3MTg3NSAxNzkuMDM5MDYyIDE2MS43MDcwMzEgMTgwLjk2MDkzOCAxNjEuMTc5Njg4IEMgMTgyLjM4NjcxOSAxNjAuNzg5MDYyIDE4Mi45MDIzNDQgMTYxLjgyMDMxMiAxODIuNTcwMzEyIDE2My4xNDg0MzggQyAxODEuNjMyODEyIDE2Ni44OTQ1MzEgMTc4LjMxNjQwNiAxNzEuMDk3NjU2IDE3Ny4zODY3MTkgMTc1LjA0Mjk2OSBDIDE3NS41ODk4NDQgMTc3LjE0NDUzMSAxNzQuMTAxNTYyIDE3NC4zNjcxODggMTczLjg5MDYyNSAxNzQuMzQ3NjU2IEMgMTczLjUxMTcxOSAxNzQuMzEyNSAxNzIuNDk2MDk0IDE3NC45Njg3NSAxNzEuODA0Njg4IDE3NS4wMzUxNTYgQyAxNjEuMzAwNzgxIDE3Ni4wNTQ2ODggMTY1Ljg1MTU2MiAxNzIuNDY4NzUgMTY3LjY0ODQzOCAxNjcuMDQ2ODc1IEMgMTY4LjE0MDYyNSAxNjUuNTU0Njg4IDE2OC42NzU3ODEgMTU4LjQ4NDM3NSAxNzEuNjc5Njg4IDE2MC41ODU5MzggQyAxNzIuNzI2NTYyIDE2MS4zMjAzMTIgMTcxLjU0Mjk2OSAxNjMuOTcyNjU2IDE3MS40MDYyNSAxNjQuODgyODEyIEMgMTcxLjIzNDM3NSAxNjYuMDA3ODEyIDE3MS4xNTYyNSAxNjguNDg0Mzc1IDE3MC45MDYyNSAxNjkuMjYxNzE5IEMgMTcwLjczNDM3NSAxNjkuODA0Njg4IDE2OC4zMDQ2ODggMTcwLjkwMjM0NCAxNjguODc1IDE3Mi42MjUgIi8+CjxwYXRoIGZpbGwtcnVsZT0ibm9uemVybyIgZmlsbD0iIzAwMCIgZmlsbC1vcGFjaXR5PSIxIiBkPSJNIDM4Ljc2MTcxOSAxNjMuNTM5MDYyIEMgMzguNDc2NTYyIDE2My4yMTA5MzggMzUuMjg5MDYyIDE2NS44MTI1IDM0LjkyOTY4OCAxNjYuMTQ0NTMxIEMgMzQuNDQxNDA2IDE2Ni41ODk4NDQgMzEuODg2NzE5IDE2OC44NjcxODggMzIuNDk2MDk0IDE2OS40NTcwMzEgQyAzNS44NTkzNzUgMTcwLjA1ODU5NCAzOC4zOTg0MzggMTY2LjQ0OTIxOSAzOC43NjE3MTkgMTYzLjUzOTA2MiBNIDQxLjc4OTA2MiAxNjEuMTk5MjE5IEMgNDIuMTI4OTA2IDE2MS42MDkzNzUgNDIuMjM4MjgxIDE2Mi4wNTQ2ODggNDIuMTcxODc1IDE2Mi41NzgxMjUgQyA0MS44NzUgMTY1LjA3NDIxOSAzOC43OTY4NzUgMTY4Ljg0Mzc1IDM3LjQzNzUgMTcxLjA5Mzc1IEMgMzYuMTk1MzEyIDE3My4xNTYyNSAzNS4xMTcxODggMTc4LjEwMTU2MiAzMS45NDUzMTIgMTc2LjQ0NTMxMiBDIDMxLjEwNTQ2OSAxNzUuMjkyOTY5IDMzLjM0NzY1NiAxNzMuMTA5Mzc1IDMzLjU0Njg3NSAxNzIuMDc0MjE5IEMgMzMuNzAzMTI1IDE3MS4yNjU2MjUgMzIuNDg4MjgxIDE3MS40NDUzMTIgMzEuOTU3MDMxIDE3MS41MzEyNSBDIDI5LjQ0OTIxOSAxNzEuOTM3NSAyNy41NzgxMjUgMTc2Ljk4NDM3NSAyNS4zMjgxMjUgMTc3LjEyNSBDIDIzLjY2Nzk2OSAxNzcuMjI2NTYyIDI0LjAwNzgxMiAxNzUuNzQyMTg4IDI0LjY3OTY4OCAxNzQuNjk5MjE5IEMgMjUuODk0NTMxIDE3Mi43OTY4NzUgMjguOTg4MjgxIDE2OS4wODIwMzEgMzAuNTc0MjE5IDE2Ny4zNjMyODEgQyAzMS44NTE1NjIgMTY1Ljk4MDQ2OSAzNy4xNTIzNDQgMTYxLjAwMzkwNiAzOC43NSAxNjAuNTY2NDA2IEMgMzkuNzY1NjI1IDE2MC4yODkwNjIgNDEuMDY2NDA2IDE2MC4zMzU5MzggNDEuNzg5MDYyIDE2MS4xOTkyMTkgIi8+CjxwYXRoIGZpbGwtcnVsZT0ibm9uemVybyIgZmlsbD0iIzAwMCIgZmlsbC1vcGFjaXR5PSIxIiBkPSJNIDU4LjYwNTQ2OSAxNjMuMTkxNDA2IEMgNTYuNjk1MzEyIDE2My44MjQyMTkgNTQuODU1NDY5IDE2NS45NDkyMTkgNTUuMTI4OTA2IDE2OC4wNjI1IEMgNTUuODM5ODQ0IDE2OC44MzIwMzEgNTkuMjYxNzE5IDE2NC4zNzg5MDYgNTguNjA1NDY5IDE2My4xOTE0MDYgTSA1My44MTI1IDE3MC41ODIwMzEgQyA1My41ODU5MzggMTcwLjg1NTQ2OSA1Mi44MzIwMzEgMTczLjUgNTMuMjEwOTM4IDE3My45ODQzNzUgQyA1NC41MTU2MjUgMTcyLjk2MDkzOCA1NS42NzE4NzUgMTcwLjQxNzk2OSA1Ny40MTQwNjIgMTcwLjE1NjI1IEMgNjEuMzMyMDMxIDE2OS41NjY0MDYgNTYuMjE4NzUgMTc1LjcwMzEyNSA1NC4zOTQ1MzEgMTc2LjU1ODU5NCBDIDUwLjk4ODI4MSAxNzguMTYwMTU2IDQ4Ljk2MDkzOCAxNzYuMjEwOTM4IDQ5LjcxMDkzOCAxNzIuNTcwMzEyIEMgNTAuMjkyOTY5IDE2OS43MjY1NjIgNTUuMjk2ODc1IDE2MS4xMzI4MTIgNTguMTU2MjUgMTYwLjQ3NjU2MiBDIDYwLjQ2ODc1IDE1OS45NDUzMTIgNjMuMjc3MzQ0IDE2MS42MTMyODEgNjIuMDM5MDYyIDE2NC4wMTE3MTkgQyA2MS4yNTM5MDYgMTY1LjUzOTA2MiA1OC41MTU2MjUgMTY5LjAzOTA2MiA1Ni45NDkyMTkgMTY5LjcxMDkzOCBDIDU2LjIzODI4MSAxNzAuMDE1NjI1IDU0LjE2NDA2MiAxNzAuMTYwMTU2IDUzLjgxMjUgMTcwLjU4MjAzMSAiLz4KPHBhdGggZmlsbC1ydWxlPSJub256ZXJvIiBmaWxsPSIjMDAwIiBmaWxsLW9wYWNpdHk9IjEiIGQ9Ik0gMjUuMTgzNTk0IDE2My4xOTE0MDYgQyAyNC40NjA5MzggMTYyLjQ4NDM3NSAxOS42OTUzMTIgMTY3LjMwNDY4OCAxOS4wODU5MzggMTY4LjA1ODU5NCBDIDE3Ljc4NTE1NiAxNjkuNjc1NzgxIDE2LjUxOTUzMSAxNzEuODc4OTA2IDE2LjQ4MDQ2OSAxNzMuOTg0Mzc1IEMgMTkuMjczNDM4IDE3NC42MjEwOTQgMjAuNDEwMTU2IDE3MCAyMi45MTc5NjkgMTcwLjEyMTA5NCBDIDI1LjIwNzAzMSAxNzAuMjMwNDY5IDIzLjgzMjAzMSAxNzIuMjE0ODQ0IDIyLjkyMTg3NSAxNzMuMjkyOTY5IEMgMjEuMzk4NDM4IDE3NS4xMDE1NjIgMTguMjQyMTg4IDE3Ny4xMjEwOTQgMTUuODU1NDY5IDE3Ni41MzkwNjIgQyAxMi4wMzkwNjIgMTc1LjYxMzI4MSAxMy4yNjk1MzEgMTcyLjA5NzY1NiAxNC42MDU0NjkgMTY5LjQ5NjA5NCBDIDE2LjA4MjAzMSAxNjYuNjIxMDk0IDIyLjc2MTcxOSAxNjAuMDA3ODEyIDI2LjA2NjQwNiAxNjAuMDQ2ODc1IEMgMzAuNzczNDM4IDE2MC4wOTc2NTYgMjguMTYwMTU2IDE2Ny44ODI4MTIgMjUuMDg1OTM4IDE2Ni45NjA5MzggQyAyMy4wNjY0MDYgMTY2LjM1MTU2MiAyNS4zODY3MTkgMTY0LjQ5NjA5NCAyNS4xODM1OTQgMTYzLjE5MTQwNiAiLz4KPHBhdGggZmlsbC1ydWxlPSJub256ZXJvIiBmaWxsPSIjMDAwIiBmaWxsLW9wYWNpdHk9IjEiIGQ9Ik0gMjAwLjkwMjM0NCAxNjMuMjIyNjU2IEMgMTk5LjM1NTQ2OSAxNjIuNjQwNjI1IDE5NS42Njc5NjkgMTY3LjM3NSAxOTYuMzc4OTA2IDE2OC4wOTc2NTYgQyAxOTkuOTUzMTI1IDE2OC44MTY0MDYgMjAwLjQ0MTQwNiAxNjYuMDIzNDM4IDIwMC45MDIzNDQgMTYzLjIyMjY1NiBNIDE5Ny43Njk1MzEgMTY5LjgzOTg0NCBDIDE5My4yNDYwOTQgMTY4LjY0NDUzMSAxOTMuNjU2MjUgMTc1Ljg4MjgxMiAxODkuNDY0ODQ0IDE3NS4zNjMyODEgQyAxODkuMTc1NzgxIDE3NC43NjU2MjUgMTg5LjAxNTYyNSAxNzQuMzc1IDE4OS4yMzgyODEgMTczLjY5NTMxMiBDIDE4OS44MTY0MDYgMTcxLjkzNzUgMTk1LjM5MDYyNSAxNjQuMjM4MjgxIDE5Ni44OTA2MjUgMTYyLjg2MzI4MSBDIDE5OC4zNzEwOTQgMTYxLjUxMTcxOSAyMDIuNzkyOTY5IDE1OS4yMzQzNzUgMjAzLjYyNSAxNjIuMDc4MTI1IEMgMjA0LjI1MzkwNiAxNjQuMjM0Mzc1IDE5OS45Mjk2ODggMTcyLjMxNjQwNiAxOTkuMTI4OTA2IDE3NC44NTE1NjIgQyAxOTguNzUgMTc1LjY3MTg3NSAxOTYuNzA3MDMxIDE3NS43MTg3NSAxOTYuNDE0MDYyIDE3NC44Mzk4NDQgQyAxOTUuOTQ1MzEyIDE3My40MjE4NzUgMTk3LjY3OTY4OCAxNzEuMzEyNSAxOTcuNzY5NTMxIDE2OS44Mzk4NDQgIi8+CjxwYXRoIGZpbGwtcnVsZT0ibm9uemVybyIgZmlsbD0iIzAwMCIgZmlsbC1vcGFjaXR5PSIxIiBkPSJNIDIwNC43MzgyODEgMTcxLjU3ODEyNSBDIDIwNS44MzU5MzggMTcyLjYxMzI4MSAyMTMuODk4NDM4IDE2Ni40ODQzNzUgMjExLjE5NTMxMiAxNjMuNTUwNzgxIEMgMjEwLjczNDM3NSAxNjMuMDU0Njg4IDIwOSAxNjIuMTIxMDk0IDIwOC41NTQ2ODggMTYzLjAyNzM0NCBaIE0gMjA4LjEyNSAxNjAuNDkyMTg4IEMgMjA5Ljc5Mjk2OSAxNjAuMTk5MjE5IDIxNC4xNDA2MjUgMTYyLjM5MDYyNSAyMTQuNDc2NTYyIDE2NC4xMDE1NjIgQyAyMTQuOTM3NSAxNjYuNDYwOTM4IDIxMi4zNTkzNzUgMTY5LjYwMTU2MiAyMTAuNjIxMDk0IDE3MS4wMjczNDQgQyAyMDkuODI0MjE5IDE3MS42ODM1OTQgMjAyLjk2MDkzOCAxNzYuMDU0Njg4IDIwMi40ODQzNzUgMTc2LjA3MDMxMiBDIDIwMS4wNTg1OTQgMTc2LjExMzI4MSAyMDAuMjkyOTY5IDE3NS4zNTkzNzUgMjAwLjY0MDYyNSAxNzMuOTM3NSBDIDIwMC45OTYwOTQgMTcyLjQ5NjA5NCAyMDUuNTg5ODQ0IDE2My4wMDc4MTIgMjA2LjUyNzM0NCAxNjEuNzA3MDMxIEMgMjA2LjkyMTg3NSAxNjEuMTYwMTU2IDIwNy40MzM1OTQgMTYwLjYxMzI4MSAyMDguMTI1IDE2MC40OTIxODggIi8+CjxwYXRoIGZpbGwtcnVsZT0ibm9uemVybyIgZmlsbD0iIzAwMCIgZmlsbC1vcGFjaXR5PSIxIiBkPSJNIDE4Mi40NTMxMjUgMTczLjMyMDMxMiBDIDE4Ni41MzEyNSAxNzQuNDUzMTI1IDE4OS40NDUzMTIgMTY2Ljk4ODI4MSAxODkuMDg1OTM4IDE2NC4wNzgxMjUgQyAxODguOTUzMTI1IDE2MyAxODguNzM4MjgxIDE2Mi42Nzk2ODggMTg3LjU1MDc4MSAxNjIuOTE0MDYyIEMgMTg2Ljc2OTUzMSAxNjMuNzg5MDYyIDE4Mi4wMTU2MjUgMTcyLjkzNzUgMTgyLjQ1MzEyNSAxNzMuMzIwMzEyIE0gMTg3LjU5Mzc1IDE2MC44NzUgQyAxOTUuMjczNDM4IDE1OS44NTE1NjIgMTkwLjY2Nzk2OSAxNzIuNTIzNDM4IDE4Ni44Nzg5MDYgMTc0LjQ0NTMxMiBDIDE4NS42MjUgMTc1LjA4MjAzMSAxODEuMDQyOTY5IDE3NS45OTYwOTQgMTc5Ljk5MjE4OCAxNzUuMjYxNzE5IEMgMTc5LjY0NDUzMSAxNzUuMDE1NjI1IDE3OS42NzU3ODEgMTc0LjU2NjQwNiAxNzkuNjM2NzE5IDE3NC4xOTkyMTkgQyAxNzkuNDcyNjU2IDE3Mi41MzkwNjIgMTgyLjY3MTg3NSAxNjYuMzc1IDE4My42NjQwNjIgMTY0LjYwOTM3NSBDIDE4NC43NTc4MTIgMTYyLjY2Nzk2OSAxODUuMDYyNSAxNjEuMjEwOTM4IDE4Ny41OTM3NSAxNjAuODc1ICIvPgo8cGF0aCBmaWxsLXJ1bGU9Im5vbnplcm8iIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iMSIgZD0iTSAxMDUuNTA3ODEyIDE3Mi42MjUgQyAxMDcuMDcwMzEyIDE3Mi41MTU2MjUgMTA2Ljc2MTcxOSAxNzAuNTE5NTMxIDEwOC40NjQ4NDQgMTcwLjUwMzkwNiBDIDExMS40NzY1NjIgMTcwLjQ3NjU2MiAxMDguNDMzNTk0IDE3NS42NzU3ODEgMTA1LjMyMDMxMiAxNzUuNzczNDM4IEMgOTguMTcxODc1IDE3NiAxMDUuMDI3MzQ0IDE2My41MjM0MzggMTA4LjE2MDE1NiAxNjEuODc1IEMgMTExLjk0NTMxMiAxNTkuODgyODEyIDExMy4xODM1OTQgMTY2LjIyMjY1NiAxMDkuODYzMjgxIDE2OC40NDkyMTkgQyAxMDguMDAzOTA2IDE2OS42OTUzMTIgMTA1LjE1MjM0NCAxNjkuMTAxNTYyIDEwNS41MDc4MTIgMTcyLjYyNSAiLz4KPHBhdGggZmlsbC1ydWxlPSJub256ZXJvIiBmaWxsPSIjMDAwIiBmaWxsLW9wYWNpdHk9IjEiIGQ9Ik0gNDYuNDIxODc1IDE2OC40MTAxNTYgQyA1MC4xNDg0MzggMTY4LjI2OTUzMSA1MS42NzE4NzUgMTcwLjA2MjUgNDcuMjEwOTM4IDE3MS4xMTcxODggQyA0Ni4zODI4MTIgMTcxLjMxMjUgNDUuNDk2MDk0IDE3MS4wMjM0MzggNDQuNjg3NSAxNzEuMzc4OTA2IEMgNDMuMTg3NSAxNzIuMDMxMjUgNDMuMTg3NSAxNzYuMjg1MTU2IDQwLjY3OTY4OCAxNzYuNDU3MDMxIEMgMzkuNTI3MzQ0IDE3Ni41MzUxNTYgMzguODU1NDY5IDE3Ni4yMDcwMzEgMzkuMTcxODc1IDE3NC45NDE0MDYgQyA0MS4xMzI4MTIgMTcyLjA5Mzc1IDQzLjgwMDc4MSAxNjQuMDM5MDYyIDQ2LjA3NDIxOSAxNjEuOTY4NzUgQyA0Ny45Mjk2ODggMTYwLjI4MTI1IDUyLjIxMDkzOCAxNjAuMjkyOTY5IDUxLjY1MjM0NCAxNjMuMzUxNTYyIEMgNTEuMzA4NTk0IDE2NS4yNDYwOTQgNDkuNjU2MjUgMTYzLjY2NDA2MiA0OC45NzI2NTYgMTYzLjU4OTg0NCBDIDQ3LjgxNjQwNiAxNjMuNDY0ODQ0IDQ2LjExNzE4OCAxNjguMTI4OTA2IDQ2LjQyMTg3NSAxNjguNDEwMTU2ICIvPgo8cGF0aCBmaWxsLXJ1bGU9Im5vbnplcm8iIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iMSIgZD0iTSAxNDYuMTYwMTU2IDE2MS41NDY4NzUgQyAxNDcuMjYxNzE5IDE2MS4zNjMyODEgMTQ5LjM4NjcxOSAxNjIuMDIzNDM4IDE0OS4wMjczNDQgMTYzLjM4NjcxOSBDIDE0OC44NTE1NjIgMTY0LjA1MDc4MSAxNDcuMDQ2ODc1IDE2My44ODY3MTkgMTQ2LjMyODEyNSAxNjQuMTc5Njg4IEMgMTQ0LjYyNSAxNjQuODcxMDk0IDE0MS43MTg3NSAxNzAuNDQ1MzEyIDE0MS43NTM5MDYgMTcyLjEwOTM3NSBDIDE0MS44MTI1IDE3NC45Mzc1IDE0NS43ODUxNTYgMTcyLjExMzI4MSAxNDUuMTUyMzQ0IDE3NC40ODgyODEgQyAxNDQuNjA5Mzc1IDE3Ni41MjczNDQgMTM5LjM1OTM3NSAxNzYuODUxNTYyIDEzOC42NTYyNSAxNzMuNzY5NTMxIEMgMTM3LjgwODU5NCAxNzAuMDQyOTY5IDE0Mi4yMTA5MzggMTYyLjIxODc1IDE0Ni4xNjAxNTYgMTYxLjU0Njg3NSAiLz4KPHBhdGggZmlsbC1ydWxlPSJub256ZXJvIiBmaWxsPSIjMDAwIiBmaWxsLW9wYWNpdHk9IjEiIGQ9Ik0gMTU3LjM4MjgxMiAxNjkuMTQwNjI1IEMgMTU4LjUxMTcxOSAxNjkuMjk2ODc1IDE2MC45Mzc1IDE2OC45MTAxNTYgMTYxLjczNDM3NSAxNjguMDkzNzUgQyAxNjIuNjM2NzE5IDE2Ny4xNjQwNjIgMTY0LjA1ODU5NCAxNjEuNTUwNzgxIDE2MS4zNzEwOTQgMTYzLjIwMzEyNSBDIDE2MC40ODQzNzUgMTYzLjc1IDE1Ni41NzgxMjUgMTY4LjMyNDIxOSAxNTcuMzgyODEyIDE2OS4xNDA2MjUgTSAxNTMuODA0Njg4IDE3My45MjE4NzUgQyAxNTMuNTAzOTA2IDE3NC4yMTg3NSAxNTIuOTQ1MzEyIDE3NC40MDYyNSAxNTIuNTExNzE5IDE3NC4zNjcxODggQyAxNTEuMjE0ODQ0IDE3Mi45OTYwOTQgMTU4LjkwNjI1IDE2Mi41NTA3ODEgMTYxLjMwNDY4OCAxNjEuNzUgQyAxNjguMTU2MjUgMTU5LjQ2NDg0NCAxNjIuMjUgMTcxLjMzNTkzOCAxNjEuNTgyMDMxIDE3My44NjMyODEgQyAxNTguNjI1IDE3NC40ODQzNzUgMTYxLjYzNjcxOSAxNzEuMDY2NDA2IDE2MC41MzEyNSAxNzAuMzQ3NjU2IEMgMTYwLjA5NzY1NiAxNzAuMDYyNSAxNTYuODQzNzUgMTcwLjA4MjAzMSAxNTYuMjM4MjgxIDE3MC4yNTc4MTIgQyAxNTQuODEyNSAxNzAuNjc1NzgxIDE1NC41MjczNDQgMTczLjIwMzEyNSAxNTMuODA0Njg4IDE3My45MjE4NzUgIi8+CjxwYXRoIGZpbGwtcnVsZT0ibm9uemVybyIgZmlsbD0iIzAwMCIgZmlsbC1vcGFjaXR5PSIxIiBkPSJNIDEyMC4xMjg5MDYgMTYyLjg3MTA5NCBDIDExNS4xNzU3ODEgMTYyLjE0ODQzOCAxMTguMjczNDM4IDE2Ni4yMDcwMzEgMTE4LjQwNjI1IDE2OC45NTcwMzEgQyAxMTguNSAxNzAuOTI5Njg4IDExNy43NjU2MjUgMTczLjg5NDUzMSAxMTUuNjIxMDk0IDE3NC41NTg1OTQgQyAxMTMuOTcyNjU2IDE3NS4wNzAzMTIgMTEwLjQ0MTQwNiAxNzQuMjEwOTM4IDExMi4xMjEwOTQgMTczLjE0MDYyNSBDIDExMi44NzUgMTcyLjY2MDE1NiAxMTUuNjI1IDE3NC43MTQ4NDQgMTE2LjQ5NjA5NCAxNzAuOTEwMTU2IEMgMTE3LjE5NTMxMiAxNjcuODY3MTg4IDExNC40MTAxNTYgMTY0LjY1MjM0NCAxMTUuNjQwNjI1IDE2Mi43MzQzNzUgQyAxMTYuNzgxMjUgMTYwLjk1NzAzMSAxMjEuMTc1NzgxIDE2MS45Njg3NSAxMjAuMTI4OTA2IDE2Mi44NzEwOTQgIi8+CjxwYXRoIGZpbGwtcnVsZT0ibm9uemVybyIgZmlsbD0iIzAwMCIgZmlsbC1vcGFjaXR5PSIxIiBkPSJNIDE1NS4yOTI5NjkgMTYyLjg3NSBMIDE1MS4wNzAzMTIgMTczLjEwMTU2MiBDIDE1MC42NjQwNjIgMTc0LjU3MDMxMiAxNDkuMzUxNTYyIDE3NC45MDYyNSAxNDkuMzUxNTYyIDE3My4xNTIzNDQgQyAxNDkuMzQ3NjU2IDE3Mi4xNTYyNSAxNTMuMDQyOTY5IDE2NC4xNzE4NzUgMTUzLjg5NDUzMSAxNjMuMzkwNjI1IEMgMTU0LjM3MTA5NCAxNjIuOTUzMTI1IDE1NC41ODIwMzEgMTYyLjc1IDE1NS4yOTI5NjkgMTYyLjg3NSAiLz4KPHBhdGggZmlsbC1ydWxlPSJub256ZXJvIiBmaWxsPSIjMDAwIiBmaWxsLW9wYWNpdHk9IjEiIGQ9Ik0gNjAuNDQ5MjE5IDE1OC4wMDM5MDYgQyA2Mi4wODk4NDQgMTU3LjE2NDA2MiA2My42NTYyNSAxNTYuMTg3NSA2NS4xMzY3MTkgMTU1LjA4NTkzOCAiLz4KPHBhdGggZmlsbC1ydWxlPSJub256ZXJvIiBmaWxsPSIjMDAwIiBmaWxsLW9wYWNpdHk9IjEiIGQ9Ik0gNjAuNTM5MDYyIDE1OC4zMzIwMzEgQyA2MC42MzY3MTkgMTU4LjMxNjQwNiA2MC43MzgyODEgMTU4LjMwMDc4MSA2MC44MzU5MzggMTU4LjI4NTE1NiBDIDYwLjc5Njg3NSAxNTguMjg5MDYyIDYwLjc1NzgxMiAxNTguMjkyOTY5IDYwLjcxODc1IDE1OC4zMDA3ODEgQyA2MC45MjE4NzUgMTU4LjI3NzM0NCA2MS4xMjEwOTQgMTU4LjIzMDQ2OSA2MS4zMjAzMTIgMTU4LjE5MTQwNiBDIDYxLjM2MzI4MSAxNTguMTgzNTk0IDYxLjQwMjM0NCAxNTguMTc1NzgxIDYxLjQ0NTMxMiAxNTguMTY3OTY5IEMgNjEuNTI3MzQ0IDE1OC4xNTIzNDQgNjEuNjAxNTYyIDE1OC4xMTMyODEgNjEuNjc5Njg4IDE1OC4wNzgxMjUgQyA2MS43NjU2MjUgMTU4LjA0Mjk2OSA2MS44NDc2NTYgMTU4LjAwNzgxMiA2MS45MzM1OTQgMTU3Ljk2ODc1IEMgNjIuMjUgMTU3LjgyODEyNSA2Mi41NjY0MDYgMTU3LjY4MzU5NCA2Mi44Nzg5MDYgMTU3LjUzMTI1IEMgNjMuMTg3NSAxNTcuMzgyODEyIDYzLjQ5NjA5NCAxNTcuMjMwNDY5IDYzLjgwMDc4MSAxNTcuMDcwMzEyIEMgNjQuMTAxNTYyIDE1Ni45MTQwNjIgNjQuMzk0NTMxIDE1Ni43MzQzNzUgNjQuNjgzNTk0IDE1Ni41NTQ2ODggQyA2NC44NDM3NSAxNTYuNDUzMTI1IDY1LjAwMzkwNiAxNTYuMzUxNTYyIDY1LjE2MDE1NiAxNTYuMjUgQyA2NS4zODY3MTkgMTU2LjEwMTU2MiA2NS41OTM3NSAxNTUuOTIxODc1IDY1LjgwODU5NCAxNTUuNzU3ODEyIEMgNjUuODk4NDM4IDE1NS42NzE4NzUgNjUuOTY0ODQ0IDE1NS41NzAzMTIgNjYuMDAzOTA2IDE1NS40NTMxMjUgQyA2Ni4wNjI1IDE1NS4zMzk4NDQgNjYuMDg5ODQ0IDE1NS4yMTg3NSA2Ni4wODU5MzggMTU1LjA4NTkzOCBDIDY2LjA3NDIxOSAxNTUuMDAzOTA2IDY2LjA2MjUgMTU0LjkxNzk2OSA2Ni4wNTA3ODEgMTU0LjgzNTkzOCBDIDY2LjAxOTUzMSAxNTQuNzEwOTM4IDY1Ljk2NDg0NCAxNTQuNjAxNTYyIDY1Ljg4MjgxMiAxNTQuNTExNzE5IEMgNjUuODM5ODQ0IDE1NC40NDE0MDYgNjUuNzgxMjUgMTU0LjM4MjgxMiA2NS43MTA5MzggMTU0LjMzOTg0NCBDIDY1LjYyMTA5NCAxNTQuMjU3ODEyIDY1LjUxMTcxOSAxNTQuMjAzMTI1IDY1LjM5MDYyNSAxNTQuMTcxODc1IEMgNjUuMTUyMzQ0IDE1NC4xMTcxODggNjQuODYzMjgxIDE1NC4xMjEwOTQgNjQuNjU2MjUgMTU0LjI2OTUzMSBDIDY0LjUzOTA2MiAxNTQuMzUxNTYyIDY0LjQxNzk2OSAxNTQuNDMzNTk0IDY0LjMwMDc4MSAxNTQuNTE1NjI1IEMgNjQuMTIxMDk0IDE1NC42NDA2MjUgNjMuOTUzMTI1IDE1NC43ODUxNTYgNjMuNzc3MzQ0IDE1NC45MTc5NjkgTCA2My45Njg3NSAxNTQuNzY5NTMxIEMgNjMuNzQ2MDk0IDE1NC45NDUzMTIgNjMuNTE1NjI1IDE1NS4xMTcxODggNjMuMjg1MTU2IDE1NS4yODUxNTYgQyA2My4wMDM5MDYgMTU1LjQ5MjE4OCA2Mi43MzQzNzUgMTU1LjcxODc1IDYyLjQ1NzAzMSAxNTUuOTI5Njg4IEMgNjIuNTE1NjI1IDE1NS44ODY3MTkgNjIuNTcwMzEyIDE1NS44NDM3NSA2Mi42MjUgMTU1LjgwMDc4MSBDIDYyLjMxMjUgMTU2LjA0Mjk2OSA2MS45OTYwOTQgMTU2LjI4MTI1IDYxLjY3NTc4MSAxNTYuNTExNzE5IEMgNjEuNTE5NTMxIDE1Ni42MjUgNjEuMzU5Mzc1IDE1Ni43MzQzNzUgNjEuMTk5MjE5IDE1Ni44NDM3NSBDIDYxLjA4MjAzMSAxNTYuOTI1NzgxIDYwLjk0OTIxOSAxNTcuMDAzOTA2IDYwLjg0NzY1NiAxNTcuMTA1NDY5IEMgNjAuNzg1MTU2IDE1Ny4xNzE4NzUgNjAuNzE4NzUgMTU3LjI0MjE4OCA2MC42NTIzNDQgMTU3LjMwODU5NCBDIDYwLjUwMzkwNiAxNTcuNDYwOTM4IDYwLjM1NTQ2OSAxNTcuNjEzMjgxIDYwLjIwNzAzMSAxNTcuNzYxNzE5IEMgNjAuMTA1NDY5IDE1Ny44NjcxODggNjAuMDc0MjE5IDE1OC4wNDY4NzUgNjAuMTU2MjUgMTU4LjE3NTc4MSBDIDYwLjE4NzUgMTU4LjIyMjY1NiA2MC4yMjY1NjIgMTU4LjI2NTYyNSA2MC4yNzczNDQgMTU4LjI5Njg3NSBDIDYwLjM1OTM3NSAxNTguMzQ3NjU2IDYwLjQ0OTIxOSAxNTguMzQzNzUgNjAuNTM5MDYyIDE1OC4zMzIwMzEgIi8+Cjwvc3ZnPgo=")');
+
+/* ================== data ================== */
+const MENU = [
+ {id:'espresso',cat:'espresso',name:'Espresso',size:'2oz',price:50,coffee:true},
+ {id:'cortado',cat:'espresso',name:'Cortado',size:'4oz',price:60,coffee:true,milk:true},
+ {id:'lattec',cat:'espresso',name:'Latte corto',size:'8oz',price:70,coffee:true,milk:true,temp:true},
+ {id:'latte',cat:'espresso',name:'Latte',size:'12oz',price:80,coffee:true,milk:true,temp:true,fav:true},
+ {id:'americano',cat:'espresso',name:'Americano',size:'12oz',price:60,coffee:true,temp:true},
+ {id:'cb',cat:'frios',name:'Cold brew',size:'12oz',price:80,coffee:true,es:'Extracción 18 hrs',en:'18-hour extraction',fav:true},
+ {id:'cbl',cat:'frios',name:'Cold brew latte',size:'12oz',price:85,coffee:true,milk:true},
+ {id:'cbt',cat:'frios',name:'Cold brew tonic',size:'12oz',price:90,coffee:true},
+ {id:'cblem',cat:'frios',name:'Cold brew lemonade',size:'12oz',price:90,coffee:true},
+ {id:'cbf',cat:'frios',name:'Cold brew float',size:'8oz',price:80,coffee:true,es:'Helado + cold brew',en:'Ice cream + cold brew'},
+ {id:'hvcb',cat:'frios',name:'Honey vainilla CB',size:'20oz',price:95,coffee:true,milk:true,es:'Miel + vainilla + leche + cold brew',en:'Honey + vanilla + milk + cold brew'},
+ {id:'shaken',cat:'frios',name:'Junio shaken espresso',size:'20oz',price:100,coffee:true,milk:true,es:'Espresso + azúcar + canela (shakeados) + leche + cold foam',en:'Espresso + sugar + cinnamon (shaken) + milk + cold foam',fav:true},
+ {id:'dchai',cat:'frios',name:'Dirty chai',size:'16oz',price:90,coffee:true,milk:true,es:'Espresso + chai David Rio + leche',en:'Espresso + David Rio chai + milk'},
+ {id:'metodo',cat:'metodos',name:'V60 / Aeropress',size:'',price:80,coffee:true,method:true,es:'Pregunta por granos',en:'Ask about our beans'},
+ {id:'matcha',cat:'sincafe',name:'Matcha',size:'16oz',price:100,milk:true,es:'Shizuoka grado alto',en:'High-grade Shizuoka'},
+ {id:'smatcha',cat:'sincafe',name:'Strawberry matcha',size:'16oz',price:100,milk:true},
+ {id:'cfmatcha',cat:'sincafe',name:'Cold foam matcha',size:'16oz',price:100,milk:true},
+ {id:'mcloud',cat:'sincafe',name:'Matcha cloud',size:'12oz',price:100,es:'Agua de coco + cold foam de matcha',en:'Coconut water + matcha cold foam'},
+ {id:'chai',cat:'sincafe',name:'Chai',size:'12oz',price:90,milk:true,es:'David Rio',en:'David Rio'},
+ {id:'choco',cat:'sincafe',name:'Chocolate',size:'12oz',price:80,milk:true},
+ {id:'blem',cat:'sincafe',name:'Blueberry lemonade',size:'16oz',price:70},
+ {id:'suero',cat:'sincafe',name:'Suerito',size:'',price:50},
+ {id:'kombu',cat:'sincafe',name:'Kombucha',size:'',price:100},
+ {id:'agua',cat:'sincafe',name:'Agua mineral',size:'',price:40},
+ {id:'bclas',cat:'alimentos',name:'Bagel clásico',size:'',price:135,food:true,es:'Queso Philadelphia, jamón, queso panela, tomate y espinaca',en:'Cream cheese, ham, panela cheese, tomato and spinach'},
+ {id:'brb',cat:'alimentos',name:'Roastbeef bagel',size:'',price:145,food:true,es:'Aderezo chipotle, roast beef, queso manchego',en:'Chipotle dressing, roast beef, manchego cheese'},
+ {id:'bsweet',cat:'alimentos',name:'Sweet bagel',size:'',price:120,food:true,es:'Peanut butter, plátano, miel y canela',en:'Peanut butter, banana, honey and cinnamon'},
+ {id:'bowl',cat:'alimentos',name:'Bowl de yogurt',size:'',price:90,food:true,es:'Yogurt griego, granola, fruta de temporada',en:'Greek yogurt, granola, seasonal fruit'},
+ {id:'oats',cat:'alimentos',name:'Overnight oats',size:'',price:80,food:true,es:'Avena, leche, peanut butter, fruta, miel',en:'Oats, milk, peanut butter, fruit, honey'},
+];
+const CATS=['espresso','frios','metodos','sincafe','alimentos','postres'];
+
+/* ================== i18n ================== */
+const T={
+es:{cat_espresso:'Espresso',cat_frios:'Fríos',cat_metodos:'Métodos',cat_sincafe:'Sin café',cat_alimentos:'Alimentos',cat_postres:'Postres del día',
+ tab_home:'Inicio',tab_menu:'Menú',tab_rewards:'Rewards',tab_orders:'Pedidos',tab_profile:'Perfil',
+ start:'Empezar',tagline:'Verano todo el año',welcome_sub:'Barra de café de especialidad en San José del Cabo. Pide antes de llegar y junta sellos en tu tarjeta Junio Rewards.',
+ have_acc:'Ya tengo cuenta',phone_t:'¿Cuál es tu celular?',phone_sub:'Te mandamos un código por SMS. Es tu llave para Junio Rewards.',send_code:'Mandar código',
+ code_t:'Escribe el código',code_sub:'Lo mandamos al',verify:'Verificar',resend:'Reenviar en 0:42',
+ name_t:'¿Cómo te llamamos en la barra?',name_l:'Tu nombre',bday_l:'Cumpleaños (opcional)',bday_h:'Más adelante habrá sorpresa ese día.',cont:'Continuar',
+ wstamp_t:'Tu primer sello va por nosotros',wstamp_sub:'Llevas 1 de 7. Al juntar 7, tu siguiente bebida con café es gratis.',go_home:'Vamos',
+ morning:'Buenos días',afternoon:'Buenas tardes',evening:'Buenas noches',
+ order_pickup:'Pedir para recoger',show_qr:'Mostrar mi QR',
+ of7:'de 7',
+ guest:'Guest Beans del mes',try_v60:'Pruébalo en V60',bar:'La barra',open_now:'Abierto ahora',closed_now:'Cerrado ahora',
+ upstairs:'Sube al 2do piso',usual:'Lo de siempre',repeat:'Repetir',today_desserts:'Hoy en la vitrina',team_note:'Equipo Junio',
+ rewards_t:'Junio Rewards',qr_t:'Muestra este código en la barra',qr_sub:'Cambia cada 60 s. Una captura de pantalla no sirve.',
+ new_in:'Nuevo código en',free_drinks:'Bebidas gratis',expires:'vence en 60 días',use_free:'Usar en mi siguiente pedido',
+ how:'Cómo funciona',how1:'Cada visita con al menos una bebida suma 1 sello, máximo 1 al día.',how2:'Con 7 sellos, la 8ª bebida con café va por la casa. Cualquier tamaño, extras incluidos.',how3:'Las bebidas sin café también suman sello, pero la gratis es con café.',how4:'Tus sellos vencen si pasan 6 meses sin visitarnos.',
+ history:'Historial de sellos',
+ msg0:'Tu tarjeta está lista.',msg1:'Llevas 1 de 7. El primero va por nosotros.',msgmid:'Llevas {n} de 7. Vas bien, sigue la ola.',msg5:'Llevas 5 de 7. Ya casi huele a gratis.',msg6:'Uno más y la siguiente va por la casa.',
+ menu_t:'Menú',stamp_tag:'Suma sello',reward_tag:'Canjeable',soldout:'Agotado',
+ size:'Tamaño',milk:'Leche',m_whole:'Entera',m_oat:'Avena',m_alm:'Almendra',m_coco:'Coco',syrup:'Jarabe',s_none:'Sin jarabe',s_van:'Vainilla',s_maple:'Maple & sal',
+ shot:'Shot extra de espresso',temp:'Temperatura',hot:'Caliente',iced:'Frío',method:'Método',bean:'Grano',b_house:'De la casa',b_guest:'Guest Beans',
+ notes:'Notas para la barra',notes_ph:'Ej. poco hielo, extra caliente',add:'Agregar',added:'Agregado al pedido',
+ cart_t:'Tu pedido',cart_empty:'Tu pedido está vacío. Date una vuelta por el menú.',see_menu:'Ver menú',
+ apply_free:'Usar mi bebida gratis',free_applied:'Bebida gratis aplicada',subtotal:'Subtotal',total:'Total',
+ pickup:'¿Cuándo pasas?',asap:'Lo antes posible',asap_s:'Listo en ~8 min',later:'Programar hoy',
+ pay:'¿Cómo pagas?',pay_app:'Pagar en la app',pay_app_s:'Tarjeta •••• 4242 · Mercado Pago',pay_bar:'Pagar en la barra',pay_bar_s:'Con la terminal al recoger',
+ place:'Enviar pedido',checkout:'Continuar',
+ st_received:'Recibido',st_preparing:'Preparando',st_ready:'Listo en barra',st_done:'Entregado',
+ st_received_s:'La barra ya lo vio.',st_preparing_s:'Tu bebida está en la máquina.',st_ready_s:'Sube al 2do piso y di tu nombre.',st_done_s:'Disfrútalo. Tu sello ya está en la tarjeta.',
+ paid_app:'Pagado en la app',pay_at_bar:'Pagas en la barra al recoger',
+ simulate:'Avanzar estado (simula la barra)',order_n:'Pedido',
+ push_ready:'Tu pedido está en la barra, {name}. Sube al 2do piso.',push_stamp:'Sello ganado. {msg}',push_free:'Juntaste 7. Tu siguiente café va por la casa.',
+ orders_t:'Tus pedidos',orders_empty:'Aún no hay pedidos. El primero se recuerda.',active:'En curso',past:'Anteriores',
+ profile_t:'Perfil',lang:'Idioma',notif:'Notificaciones',n_orders:'Pedido listo',n_rewards:'Sellos y bebidas gratis',n_promos:'Promos (1 o 2 al mes)',
+ payment:'Métodos de pago',fav:'Bebida favorita',delete:'Borrar mi cuenta',delete_q:'¿Borrar tu cuenta?',delete_s:'Se borran tus sellos, bebidas gratis e historial. No se puede deshacer.',cancel:'Cancelar',confirm_del:'Sí, borrar',
+ hours:'Horario',hours_v:'Lun a vie 7:00 a 19:00 · Sáb 8:00 a 16:00 · Dom cerrado',address:'Calle Manuel Doblado s/n, 2do piso, Centro, San José del Cabo',
+ already_today:'Hoy ya ganaste tu sello. Mañana va el siguiente.',freeonly:'La bebida gratis aplica en bebidas con café.',
+ back:'Atrás',edit:'Editar'},
+en:{cat_espresso:'Espresso',cat_frios:'Iced',cat_metodos:'Brew methods',cat_sincafe:'No coffee',cat_alimentos:'Food',cat_postres:'Today\'s desserts',
+ tab_home:'Home',tab_menu:'Menu',tab_rewards:'Rewards',tab_orders:'Orders',tab_profile:'Profile',
+ start:'Get started',tagline:'Summer all year',welcome_sub:'Specialty coffee bar in San José del Cabo. Order ahead and collect stamps on your Junio Rewards card.',
+ have_acc:'I already have an account',phone_t:'What\'s your phone number?',phone_sub:'We\'ll text you a code. It\'s your key to Junio Rewards.',send_code:'Send code',
+ code_t:'Enter the code',code_sub:'We sent it to',verify:'Verify',resend:'Resend in 0:42',
+ name_t:'What should we call you at the bar?',name_l:'Your name',bday_l:'Birthday (optional)',bday_h:'There\'ll be a surprise on that day later on.',cont:'Continue',
+ wstamp_t:'Your first stamp is on us',wstamp_sub:'You have 1 of 7. Collect 7 and your next coffee drink is free.',go_home:'Let\'s go',
+ morning:'Good morning',afternoon:'Good afternoon',evening:'Good evening',
+ order_pickup:'Order for pickup',show_qr:'Show my QR',
+ of7:'of 7',
+ guest:'Guest Beans this month',try_v60:'Try it as a V60',bar:'The bar',open_now:'Open now',closed_now:'Closed now',
+ upstairs:'Head up to the 2nd floor',usual:'The usual',repeat:'Repeat',today_desserts:'In the case today',team_note:'The Junio team',
+ rewards_t:'Junio Rewards',qr_t:'Show this code at the bar',qr_sub:'It changes every 60 s. A screenshot won\'t work.',
+ new_in:'New code in',free_drinks:'Free drinks',expires:'expires in 60 days',use_free:'Use on my next order',
+ how:'How it works',how1:'Every visit with at least one drink earns 1 stamp, up to 1 per day.',how2:'With 7 stamps, your 8th coffee drink is on the house. Any size, extras included.',how3:'Non-coffee drinks earn stamps too, but the free one is a coffee drink.',how4:'Stamps expire after 6 months without a visit.',
+ history:'Stamp history',
+ msg0:'Your card is ready.',msg1:'1 of 7. The first one is on us.',msgmid:'{n} of 7. Keep riding the wave.',msg5:'5 of 7. You can almost smell the free one.',msg6:'One more and the next one is on the house.',
+ menu_t:'Menu',stamp_tag:'Earns stamp',reward_tag:'Redeemable',soldout:'Sold out',
+ size:'Size',milk:'Milk',m_whole:'Whole',m_oat:'Oat',m_alm:'Almond',m_coco:'Coconut',syrup:'Syrup',s_none:'No syrup',s_van:'Vanilla',s_maple:'Maple & salt',
+ shot:'Extra espresso shot',temp:'Temperature',hot:'Hot',iced:'Iced',method:'Method',bean:'Beans',b_house:'House',b_guest:'Guest Beans',
+ notes:'Notes for the bar',notes_ph:'E.g. light ice, extra hot',add:'Add',added:'Added to your order',
+ cart_t:'Your order',cart_empty:'Your order is empty. Take a look at the menu.',see_menu:'See menu',
+ apply_free:'Use my free drink',free_applied:'Free drink applied',subtotal:'Subtotal',total:'Total',
+ pickup:'When are you coming?',asap:'As soon as possible',asap_s:'Ready in ~8 min',later:'Schedule for today',
+ pay:'How are you paying?',pay_app:'Pay in the app',pay_app_s:'Card •••• 4242 · Mercado Pago',pay_bar:'Pay at the bar',pay_bar_s:'With the terminal at pickup',
+ place:'Place order',checkout:'Continue',
+ st_received:'Received',st_preparing:'Preparing',st_ready:'Ready at the bar',st_done:'Picked up',
+ st_received_s:'The bar has it.',st_preparing_s:'Your drink is on the machine.',st_ready_s:'Head up to the 2nd floor and say your name.',st_done_s:'Enjoy. Your stamp is on the card.',
+ paid_app:'Paid in the app',pay_at_bar:'You pay at the bar at pickup',
+ simulate:'Advance status (simulates the bar)',order_n:'Order',
+ push_ready:'Your order is at the bar, {name}. Head up to the 2nd floor.',push_stamp:'Stamp earned. {msg}',push_free:'You got 7. Your next coffee is on the house.',
+ orders_t:'Your orders',orders_empty:'No orders yet. The first one is memorable.',active:'In progress',past:'Past orders',
+ profile_t:'Profile',lang:'Language',notif:'Notifications',n_orders:'Order ready',n_rewards:'Stamps and free drinks',n_promos:'Promos (1 or 2 a month)',
+ payment:'Payment methods',fav:'Favorite drink',delete:'Delete my account',delete_q:'Delete your account?',delete_s:'Your stamps, free drinks and history will be deleted. This can\'t be undone.',cancel:'Cancel',confirm_del:'Yes, delete',
+ hours:'Hours',hours_v:'Mon to Fri 7:00 to 19:00 · Sat 8:00 to 16:00 · Sun closed',address:'Calle Manuel Doblado s/n, 2nd floor, Centro, San José del Cabo',
+ already_today:'You already got today\'s stamp. The next one comes tomorrow.',freeonly:'The free drink applies to coffee drinks.',
+ back:'Back',edit:'Edit'}
+};
+function t(k,v){let s=(T[S.lang]&&T[S.lang][k])||T.es[k]||k;if(v)for(const x in v)s=s.replace('{'+x+'}',v[x]);return s}
+
+/* ================== state ================== */
+function fresh(){return{
+ view:'cliente',lang:'es',screen:'welcome',params:{},
+ user:{name:'Sofía',phone:'624 123 4567',bday:''},
+ stamps:0,free:0,stampedToday:false,popIdx:-1,
+ log:[],
+ cart:[],pickup:'asap',pickTime:'10:30',pay:'app',
+ orders:[],orderSeq:24,
+ notif:{orders:true,rewards:true,promos:true},
+ guest:{roaster:'Café Arrieros',origin:'Pluma Hidalgo, Oaxaca',process:'Lavado',notes:'Panela, naranja dulce, cacao',alt:'1,400 msnm'},
+ soldout:{},prices:{},
+ desserts:[{id:'d1',name:'Galleta',price:40,out:false},{id:'d2',name:'Rol de canela',price:80,out:false},{id:'d3',name:'Rebanada de pastel',price:80,out:true}],
+ barTab:'orders',scanned:false,deskTab:'hoy',
+ extraOrders:[
+  {id:'J-022',name:'Diego',items:['Cold brew 12oz','Bagel clásico'],status:'preparing',pay:'app',when:'ASAP'},
+  {id:'J-023',name:'Mariana',items:['Matcha 16oz · avena'],status:'received',pay:'bar',when:'10:45'},
+ ],
+ stats:{sales:2340,orders:19,stamps:31,redeems:4},
+}}
+let S=fresh();
+const price=id=>S.prices[id]??MENU.find(m=>m.id===id).price;
+
+/* ================== icons ================== */
+const IC={
+ star:'<path d="M12 1.5c.9 6.4 3.1 8.6 9.5 10.5-6.4 1.9-8.6 4.1-9.5 10.5-.9-6.4-3.1-8.6-9.5-10.5C8.9 10.1 11.1 7.9 12 1.5z" fill="currentColor"/>',
+ wave:'<path d="M2 10c3 0 3-3.5 6-3.5S11 10 14 10s3-3.5 6-3.5M2 16c3 0 3-3.5 6-3.5s3 3.5 6 3.5 3-3.5 6-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+ sun:'<circle cx="12" cy="12" r="4.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+ cup:'<path d="M4.5 9.5h12v4.5a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5z" fill="currentColor"/><path d="M16.5 10.5h1.5a2.5 2.5 0 0 1 0 5h-1.5M8.5 2.5c-1.2 1.5 1.2 2.5 0 4.5M12.5 2.5c-1.2 1.5 1.2 2.5 0 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+ board:'<path d="M18.5 2.5c2.5 2.5-.5 11-7.5 17.5-1.6 1.5-4 1.7-5.4.3-1.4-1.4-1.2-3.8.3-5.4C12.4 8 16 .1 18.5 2.5z" fill="currentColor"/><path d="M8 19l-2 2.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+ palm:'<path d="M12.5 22c0-5 .5-9 1.5-12.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14 9.5C12 6 7.5 5.5 5 8c3-.5 6 0 9 1.5zm0 0c1-3.5 5-5 7.5-3-3 0-5.5 1-7.5 3zm0 0c-3-1-6.5 1-7.5 4.5 2.5-2 5-3.5 7.5-4.5zm0 0c3 .3 5.5 2.5 6.5 5.5-2-1.8-4-3.5-6.5-5.5z" fill="currentColor"/>',
+ hill:'<path d="M1.5 20 8 9l4 6 3-4 7.5 9z" fill="currentColor"/><circle cx="17.5" cy="5.5" r="2.5" fill="currentColor"/>',
+ home:'<path d="M3 11 12 3.5 21 11v9.5h-6v-6H9v6H3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+ menu:'<path d="M6 3.5h9l3 3v14H6zM9 9h6M9 13h6M9 17h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>',
+ bag:'<path d="M5 8h14l-1 12.5H6zM9 8V6.5a3 3 0 0 1 6 0V8" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+ user:'<circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 21c1-4.5 4.5-6.5 8-6.5s7 2 8 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+ qr:'<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5zM14 18.5h2M18.5 14H20" fill="none" stroke="currentColor" stroke-width="2"/>',
+ back:'<path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+ chev:'<path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+ pin:'<path d="M12 21.5s-7-6.3-7-12a7 7 0 0 1 14 0c0 5.7-7 12-7 12z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="9.5" r="2.5" fill="currentColor"/>',
+ plus:'<path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+ minus:'<path d="M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+};
+const svg=(k,s='')=>`<svg viewBox="0 0 24 24" aria-hidden="true" ${s}>${IC[k]}</svg>`;
+const STAMP_ICONS=['cup','wave','sun','star','board','palm','hill'];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const mx=n=>'$'+n.toLocaleString('es-MX');
+
+/* ================== helpers ================== */
+function cabosNow(){const p=new Intl.DateTimeFormat('en-US',{timeZone:'America/Mazatlan',hour:'numeric',minute:'numeric',weekday:'short',hour12:false}).formatToParts(new Date());const g=k=>p.find(x=>x.type===k)?.value;return{h:+g('hour')%24,m:+g('minute'),d:g('weekday')}}
+function isOpen(){const n=cabosNow(),mins=n.h*60+n.m;if(n.d==='Sun')return false;if(n.d==='Sat')return mins>=480&&mins<960;return mins>=420&&mins<1140}
+function greet(){const h=cabosNow().h;return h<12?t('morning'):h<19?t('afternoon'):t('evening')}
+function clock(){const n=cabosNow();return n.h+':'+String(n.m).padStart(2,'0')}
+function stampMsg(n){if(n===0)return t('msg0');if(n===1)return t('msg1');if(n===5)return t('msg5');if(n===6)return t('msg6');return t('msgmid',{n})}
+
+function giveStamp(src){
+ if(S.stampedToday){toast(t('already_today'));return false}
+ S.stamps++;S.stampedToday=true;S.popIdx=S.stamps-1;S.stats.stamps++;
+ S.log.unshift({d:new Date().toLocaleDateString(S.lang==='es'?'es-MX':'en-US',{day:'numeric',month:'short'}),what:src,type:'+1'});
+ if(S.stamps>=7){S.stamps=7;setTimeout(()=>{S.stamps=0;S.free++;S.popIdx=-1;S.log.unshift({d:'',what:'Bebida gratis ganada',type:'★'});push(t('push_free'));render()},1600);}
+ else push(t('push_stamp',{msg:stampMsg(S.stamps)}));
+ return true;
+}
+
+/* ================== client screens ================== */
+const SCREENS=[
+ ['welcome','Bienvenida'],['phone','Registro: celular'],['code','Registro: código SMS'],['name','Registro: nombre'],['wstamp','Sello de bienvenida'],
+ ['home','Inicio'],['rewards','Junio Rewards + QR'],['menu','Menú'],['product','Detalle y personalización'],['cart','Carrito'],['checkout','Pago y recogida'],['status','Estado del pedido'],['orders','Mis pedidos'],['profile','Perfil e idioma'],['barinfo','La barra'],
+];
+const NOTES={
+ welcome:['Primera impresión: logo, "Verano todo el año" y el selector de idioma desde el arranque.','Sin carrusel de 4 pantallas. Un solo botón para empezar.'],
+ phone:['Registro solo con celular, como se definió. Una cuenta por número verificado.'],
+ code:['El código llega por SMS. En el prototipo ya viene escrito.'],
+ name:['El nombre es el que el barista dice al entregar. Cumpleaños opcional para la fase 2.'],
+ wstamp:['Aquí se regala el sello de bienvenida: el cliente arranca con 1 de 7.'],
+ home:['Saludo con nombre, avance de la tarjeta, Guest Beans vivo y la barra abierta o cerrada según la hora real de Los Cabos.','El texto de Guest Beans se edita en el Panel del dueño; prueba cambiarlo allá.'],
+ rewards:['Tarjeta de 7 estampillas ilustradas más la gratis.','El QR cambia cada 60 segundos y tiene cuenta regresiva.','Prueba "Dar sello en barra" a la derecha para ver la animación.'],
+ menu:['Menú real de menu.csv, con precios en MXN.','Las bebidas con café dicen "Canjeable". Los agotados se ven grises y no se pueden pedir.'],
+ product:['Leche vegetal +$20, jarabe +$5, shot +$20, igual que el menú impreso.','Si hay bebida gratis, se aplica en el carrito, no aquí.'],
+ cart:['La bebida gratis aparece solo en bebidas con café e incluye los extras.'],
+ checkout:['Pagar en la app (Mercado Pago) o en la barra con la terminal.','Recoger lo antes posible o programar el mismo día.'],
+ status:['Recibido, preparando, listo, entregado. Al marcar entregado se suma el sello.','El botón de demo hace lo que haría el barista. También puedes avanzarlo desde la App de barra.'],
+ orders:['Historial y "Repetir" para la bebida de siempre.'],
+ profile:['Cambia el idioma aquí: toda la app pasa a inglés al instante.','Borrar cuenta es obligatorio para publicar en App Store.'],
+ barinfo:['Pantalla "La barra": lo que hace sentir que es un solo lugar y no una cadena.'],
+};
+const TABS={home:'home',rewards:'rewards',menu:'menu',product:'menu',cart:'orders',checkout:'orders',status:'orders',orders:'orders',profile:'profile',barinfo:'home'};
+
+function go(screen,params={}){S.screen=screen;S.params=params;S.popIdxKeep=false;render();const sc=document.querySelector('.scroll');if(sc)sc.scrollTop=0}
+
+function stampCard(big=true){
+ let h='<div class="stamps">';
+ for(let i=0;i<7;i++){const on=i<S.stamps;h+=`<div class="stamp ${on?'on':''} ${i===S.popIdx?'pop':''}"><div class="in">${svg(STAMP_ICONS[i])}<span class="num">${i+1}</span></div></div>`}
+ h+=`<div class="stamp free"><div class="in"><div><b>${S.lang==='es'?'Va por<br>la casa':'On the<br>house'}</b><span>8ª</span></div></div></div></div>`;
+ return h;
+}
+
+function scrWelcome(){return`<div class="scroll" style="background:var(--negro);color:var(--crema)"><div class="pad" style="min-height:100%;display:grid;grid-template-columns:minmax(0,1fr);align-content:space-between;gap:24px;padding-top:40px;position:relative">
+ <svg class="star" viewBox="0 0 24 24" style="width:90px;top:30px;right:-14px">${IC.star}</svg>
+ <svg class="star" viewBox="0 0 24 24" style="width:36px;top:250px;left:16px;color:var(--salvia-cl)">${IC.star}</svg>
+ <div class="pills" style="justify-content:flex-end;position:relative">${['es','en'].map(l=>`<button class="pill" style="border-color:var(--crema);${S.lang===l?'background:var(--crema);color:var(--negro)':''}" data-lang="${l}">${l==='es'?'Español':'English'}</button>`).join('')}</div>
+ <div style="display:grid;gap:18px;position:relative">
+  <span class="logo full" style="width:100%;color:var(--oliva)"></span>
+  <p class="brush" style="font-size:30px;color:var(--crema)">${t('tagline')}</p>
+  <p style="margin:0;color:var(--salvia-cl);max-width:32ch">${t('welcome_sub')}</p>
+ </div>
+ <div class="stack"><button class="btn sage" data-go="phone">${t('start')}</button><button class="btn line" style="border-color:var(--crema);color:var(--crema)" data-go="phone">${t('have_acc')}</button></div>
+</div></div>`}
+
+function scrPhone(){return`<div class="scroll"><div class="pad stack" style="gap:20px">
+ <button class="back" data-go="welcome">${svg('back','width="18" height="18"')} ${t('back')}</button>
+ <h2 class="h-l">${t('phone_t')}</h2><p class="muted" style="margin:0">${t('phone_sub')}</p>
+ <div class="row"><div class="field" style="width:88px"><label for="cc">País</label><input id="cc" value="+52" readonly></div><div class="field" style="flex:1"><label for="ph">Celular</label><input id="ph" inputmode="tel" value="${esc(S.user.phone)}"></div></div>
+ <button class="btn dark" data-act="sendcode">${t('send_code')}</button>
+</div></div>`}
+
+function scrCode(){return`<div class="scroll"><div class="pad stack" style="gap:20px">
+ <button class="back" data-go="phone">${svg('back','width="18" height="18"')} ${t('back')}</button>
+ <h2 class="h-l">${t('code_t')}</h2><p class="muted" style="margin:0">${t('code_sub')} +52 ${esc(S.user.phone)}</p>
+ <div class="codebox">${'482916'.split('').map((d,i)=>`<input id="c${i}" aria-label="Dígito ${i+1}" value="${d}" maxlength="1" inputmode="numeric">`).join('')}</div>
+ <p class="small" style="margin:0">${t('resend')}</p>
+ <button class="btn dark" data-go="name">${t('verify')}</button>
+</div></div>`}
+
+function scrName(){return`<div class="scroll"><div class="pad stack" style="gap:20px">
+ <button class="back" data-go="code">${svg('back','width="18" height="18"')} ${t('back')}</button>
+ <h2 class="h-l">${t('name_t')}</h2>
+ <div class="field"><label for="nm">${t('name_l')}</label><input id="nm" value="${esc(S.user.name)}"></div>
+ <div class="field"><label for="bd">${t('bday_l')}</label><input id="bd" type="date" value="${esc(S.user.bday)}"><span class="small">${t('bday_h')}</span></div>
+ <button class="btn dark" data-act="savename">${t('cont')}</button>
+</div></div>`}
+
+function scrWstamp(){return`<div class="scroll" style="background:var(--salvia)"><div class="pad" style="min-height:100%;display:grid;grid-template-columns:minmax(0,1fr);align-content:center;gap:22px;text-align:center;justify-items:center;position:relative">
+ <svg class="star" viewBox="0 0 24 24" style="width:70px;top:60px;left:20px;color:var(--hueso)">${IC.star}</svg>
+ <div class="stamp on pop" style="width:150px;--c:var(--hueso)"><div class="in">${svg('cup')}<span class="num">1</span></div></div>
+ <h2 class="h-xl" style="font-size:36px">${t('wstamp_t')}</h2>
+ <p style="margin:0;max-width:30ch">${t('wstamp_sub')}</p>
+ <button class="btn dark" data-go="home">${t('go_home')}</button>
+</div></div>`}
+
+function scrHome(){
+ const open=isOpen(),last=S.orders.find(o=>o.status==='done')||null;
+ const usual=last?last.lines.map(l=>l.name).join(', '):'Junio shaken espresso · avena';
+ return`<div class="scroll"><div class="pad stack" style="gap:16px">
+ <div class="between"><div><div class="eyebrow">${greet()}</div><h2 class="h-xl">${esc(S.user.name)}</h2></div>
+  <span class="tag ${open?'':'out'}">${open?t('open_now'):t('closed_now')}</span></div>
+ <button class="card ink" data-go="rewards" style="text-align:left;display:grid;gap:12px;position:relative;overflow:hidden">
+  <svg class="star" viewBox="0 0 24 24" style="width:70px;right:-12px;top:-14px">${IC.star}</svg>
+  <div class="between"><span class="h-m">Junio Rewards</span><span class="price" style="font-size:22px">${S.stamps} <small style="font-size:13px;color:var(--salvia-cl)">${t('of7')}</small></span></div>
+  <div class="row" style="gap:6px">${Array.from({length:7},(_,i)=>`<span style="flex:1;height:22px;border-radius:4px;background:${i<S.stamps?'var(--salvia)':'#3a3a37'}"></span>`).join('')}<span style="flex:1;height:22px;border-radius:4px;border:1.5px dashed var(--salvia-cl)"></span></div>
+  <div style="font-size:13.5px;color:var(--crema)">${S.free?`<b style="color:var(--salvia)">${S.free} ${t('free_drinks').toLowerCase()}</b> · `:''}${stampMsg(S.stamps)}</div>
+ </button>
+ <div class="row"><button class="btn dark" data-go="menu" style="flex:1">${svg('bag','width="18" height="18"')} ${t('order_pickup')}</button><button class="btn line" data-go="rewards" style="width:auto;padding-inline:16px" aria-label="${t('show_qr')}">${svg('qr','width="20" height="20"')}</button></div>
+ <div class="label" style="display:grid;gap:6px">
+  <div class="between"><span class="eyebrow" style="color:var(--negro)">${t('guest')}</span><svg viewBox="0 0 24 24" width="22" style="color:var(--salvia)">${IC.star}</svg></div>
+  <div class="h-l" style="font-size:24px">${esc(S.guest.roaster)}</div>
+  <div style="font-size:13.5px">${esc(S.guest.origin)} · ${esc(S.guest.process)} · ${esc(S.guest.alt)}</div>
+  <div style="font-size:13.5px"><i>${esc(S.guest.notes)}</i></div>
+  <button class="chip-btn" style="justify-self:start;margin-top:4px" data-go="product" data-id="metodo">${t('try_v60')} →</button>
+ </div>
+ <div><div class="between" style="margin-bottom:8px"><span class="h-m">${t('usual')}</span></div>
+  <div class="card between"><div style="min-width:0"><b style="text-transform:uppercase;font-size:14px">${esc(usual)}</b><div class="small">${last?mx(last.total):mx(120)}</div></div><button class="chip-btn" data-act="repeat">${t('repeat')}</button></div></div>
+ <div><div class="h-m" style="margin-bottom:8px">${t('today_desserts')}</div>
+  <div class="row" style="overflow-x:auto;gap:8px;scrollbar-width:none">${S.desserts.map(d=>`<div class="card" style="min-width:132px;padding:12px;${d.out?'opacity:.45':''}"><b style="font-size:13px;text-transform:uppercase">${esc(d.name)}</b><div class="price">${mx(d.price)}</div>${d.out?`<span class="tag out">${t('soldout')}</span>`:''}</div>`).join('')}</div></div>
+ <button class="card sage between" data-go="barinfo" style="text-align:left"><div><span class="h-m">${t('bar')}</span><div style="font-size:13px">${t('upstairs')} · Manuel Doblado s/n</div></div>${svg('chev','width="20"')}</button>
+ <p class="small" style="margin:0;text-align:center">“${S.lang==='es'?'Ustedes pidieron más cold brew. Ya llegó el tonic.':'You asked for more cold brew. The tonic is here.'}” · ${t('team_note')}</p>
+</div></div>`}
+
+function qrSvg(text){
+ let n,dark;
+ try{const q=qrcode(0,'M');q.addData(text);q.make();n=q.getModuleCount();dark=(r,c)=>q.isDark(r,c)}
+ catch(e){n=29;let h=0;for(const ch of text)h=(h*31+ch.charCodeAt(0))>>>0;const rnd=()=>{h^=h<<13;h^=h>>>17;h^=h<<5;return(h>>>0)/4294967296};const g=[];for(let r=0;r<n;r++){g[r]=[];for(let c=0;c<n;c++)g[r][c]=rnd()>.5}const fin=(R,C)=>{for(let r=0;r<7;r++)for(let c=0;c<7;c++)g[R+r][C+c]=r===0||r===6||c===0||c===6||(r>1&&r<5&&c>1&&c<5)};fin(0,0);fin(0,n-7);fin(n-7,0);dark=(r,c)=>g[r][c]}
+ let d='';for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(dark(r,c))d+=`M${c} ${r}h1v1h-1z`;
+ return`<svg class="qr" viewBox="-1 -1 ${n+2} ${n+2}" shape-rendering="crispEdges" role="img" aria-label="Código QR"><path d="${d}" fill="#1D1D1B"/></svg>`;
+}
+function qrToken(){const step=Math.floor(Date.now()/60000);return`JUNIO:U-8F2K:${step}:${(step*7919%100000).toString(36)}`}
+
+function scrRewards(){return`<div class="scroll"><div class="pad stack" style="gap:16px">
+ <div class="between"><h2 class="h-xl">Junio<br>Rewards</h2><div style="text-align:right"><div class="price" style="font-size:40px;line-height:1">${S.stamps}<span style="font-size:18px">/7</span></div></div></div>
+ ${stampCard()}
+ <p style="margin:0;font-weight:700">${stampMsg(S.stamps)}</p>
+ ${S.free?`<div class="card ink between"><div><span class="h-m" style="color:var(--salvia)">${S.free} ${t('free_drinks')}</span><div class="small" style="color:var(--salvia-cl)">${t('expires')}</div></div><button class="chip-btn" style="border-color:var(--crema);color:var(--crema)" data-go="menu">${t('use_free')}</button></div>`:''}
+ <div class="qrbox"><span class="h-m">${t('qr_t')}</span><div id="qr">${qrSvg(qrToken())}</div>
+  <div class="ring" id="ring"></div><span class="small" style="text-align:center">${t('qr_sub')}</span></div>
+ <details class="card"><summary class="h-m" style="cursor:pointer">${t('how')}</summary><ul style="margin:10px 0 0;padding-left:18px;display:grid;gap:6px;font-size:14px"><li>${t('how1')}</li><li>${t('how2')}</li><li>${t('how3')}</li><li>${t('how4')}</li></ul></details>
+ <div><div class="h-m" style="margin-bottom:4px">${t('history')}</div>
+  ${(S.log.length?S.log:[]).map(l=>`<div class="list-row"><span>${esc(l.what)}</span><span class="small">${esc(l.d)} <b>${l.type}</b></span></div>`).join('')}
+ </div>
+</div></div>`}
+
+function scrMenu(){
+ const cat=S.params.cat||'espresso';
+ let items=cat==='postres'?S.desserts.map(d=>({id:d.id,name:d.name,price:d.price,dessert:true,out:d.out})):MENU.filter(m=>m.cat===cat);
+ const head={espresso:'Espresso',frios:'Fríos',metodos:'Métodos',sincafe:'Sin café',alimentos:'Alimentos',postres:'Postres'};
+ return`<div class="scroll"><div class="pad" style="padding-bottom:20px">
+ <div class="between" style="margin-bottom:10px"><h2 class="h-xl">${t('menu_t')}</h2>${S.cart.length?`<button class="chip-btn" data-go="cart">${svg('bag','width="14" height="14" style="vertical-align:-2px"')} ${S.cart.length}</button>`:''}</div>
+ <div class="cats">${CATS.map(c=>`<button class="pill" aria-pressed="${c===cat}" data-cat="${c}">${t('cat_'+c)}</button>`).join('')}</div>
+ <div style="position:relative;margin-top:6px"><p class="brush" style="font-size:34px">${S.lang==='es'?head[cat]:t('cat_'+cat)}</p><svg class="star" viewBox="0 0 24 24" style="width:40px;right:6px;top:-6px">${IC.star}</svg></div>
+ ${items.map(m=>{const out=m.dessert?m.out:S.soldout[m.id];const p=m.dessert?m.price:price(m.id);const ds=m[S.lang]||m.es;
+  return`<button class="item" ${out?'disabled':''} data-go="product" data-id="${m.id}">
+  <span class="nm">${esc(m.name)}${m.size?`<span class="sz">${m.size}</span>`:''}</span><span class="price">${m.id==='metodo'?'$80–100':mx(p)}</span>
+  ${ds?`<span class="ds">${esc(ds)}</span>`:''}
+  <span class="tags">${out?`<span class="tag out">${t('soldout')}</span>`:''}${!m.food&&!m.dessert?`<span class="tag">${t('stamp_tag')}</span>`:''}${m.coffee?`<span class="tag ink">${t('reward_tag')}</span>`:''}</span></button>`}).join('')}
+</div></div>`}
+
+function prodById(id){const m=MENU.find(x=>x.id===id);if(m)return m;const d=S.desserts.find(x=>x.id===id);return d?{id:d.id,name:d.name,price:d.price,dessert:true,cat:'postres'}:MENU[0]}
+function optPrice(m,o){let p=m.dessert?m.price:price(m.id);if(m.method&&o.bean==='guest')p=100;if(o.milk&&o.milk!=='whole')p+=20;if(o.syrup&&o.syrup!=='none')p+=5;if(o.shot)p+=20;return p}
+function scrProduct(){
+ const m=prodById(S.params.id||'latte');const o=S.params.o||(S.params.o={milk:'whole',syrup:'none',shot:false,temp:'hot',method:'v60',bean:'house',qty:1,notes:''});
+ const drink=!m.food&&!m.dessert;
+ const grp=(label,key,opts)=>`<div class="stack" style="gap:8px"><span class="eyebrow" style="color:var(--negro)">${label}</span><div class="pills">${opts.map(([v,l,extra])=>`<button class="pill" aria-pressed="${o[key]===v}" data-opt="${key}" data-val="${v}">${l}${extra?` <small>${extra}</small>`:''}</button>`).join('')}</div></div>`;
+ const ds=m[S.lang]||m.es;
+ return`<div class="scroll"><div style="background:var(--salvia-cl);padding:8px 20px 22px;position:relative;overflow:hidden">
+  <button class="back" data-go="menu" data-cat="${m.cat}">${svg('back','width="18" height="18"')} ${t('menu_t')}</button>
+  <svg class="star" viewBox="0 0 24 24" style="width:120px;right:-20px;top:20px;color:var(--salvia)">${IC.star}</svg>
+  <div style="position:relative;display:grid;gap:6px;margin-top:10px">
+   <span class="eyebrow" style="color:var(--negro)">${t('cat_'+m.cat)}${m.size?' · '+m.size:''}</span>
+   <h2 class="h-xl">${esc(m.name)}</h2>
+   ${ds?`<p style="margin:0;max-width:30ch">${esc(ds)}</p>`:''}
+   <div class="row" style="gap:6px;margin-top:4px">${drink?`<span class="tag" style="background:var(--hueso)">${t('stamp_tag')}</span>`:''}${m.coffee?`<span class="tag ink">${t('reward_tag')}</span>`:''}</div>
+  </div></div>
+ <div class="pad stack" style="gap:18px;padding-top:18px">
+  ${m.method?grp(t('method'),'method',[['v60','V60'],['aero','Aeropress']])+grp(t('bean'),'bean',[['house',t('b_house'),'$80'],['guest',esc(S.guest.roaster),'$100']])+`<p class="small" style="margin:-8px 0 0">Precio por grano de ejemplo; el dueño lo confirma.</p>`:''}
+  ${m.temp?grp(t('temp'),'temp',[['hot',t('hot')],['iced',t('iced')]]):''}
+  ${m.milk?grp(t('milk'),'milk',[['whole',t('m_whole')],['oat',t('m_oat'),'+$20'],['alm',t('m_alm'),'+$20'],['coco',t('m_coco'),'+$20']]):''}
+  ${drink&&(m.coffee||m.milk)?grp(t('syrup'),'syrup',[['none',t('s_none')],['van',t('s_van'),'+$5'],['maple',t('s_maple'),'+$5']]):''}
+  ${drink&&(m.coffee||m.milk)?`<div class="list-row" style="border-top:1px solid var(--linea)"><span>${t('shot')} <span class="small">+$20</span></span><button class="toggle" role="switch" aria-checked="${o.shot}" aria-label="${t('shot')}" data-opt="shot" data-val="toggle"></button></div>`:''}
+  <div class="field"><label for="nt">${t('notes')}</label><input id="nt" placeholder="${t('notes_ph')}" value="${esc(o.notes)}"></div>
+ </div></div>
+ <div style="padding:12px 20px 16px;border-top:1.5px solid var(--negro);display:flex;gap:12px;align-items:center;background:var(--hueso)">
+  <div class="row" style="gap:6px"><button class="chip-btn" style="padding:6px 8px" data-opt="qty" data-val="-1" aria-label="Menos">${svg('minus','width="14" height="14"')}</button><b style="min-width:18px;text-align:center;font-variant-numeric:tabular-nums">${o.qty}</b><button class="chip-btn" style="padding:6px 8px" data-opt="qty" data-val="1" aria-label="Más">${svg('plus','width="14" height="14"')}</button></div>
+  <button class="btn dark" data-act="addcart" style="flex:1">${t('add')} · ${mx(optPrice(m,o)*o.qty)}</button></div>`
+}
+function lineDesc(m,o){const a=[];if(m.method)a.push(o.method==='v60'?'V60':'Aeropress',o.bean==='guest'?S.guest.roaster:t('b_house'));if(m.temp)a.push(o.temp==='hot'?t('hot'):t('iced'));if(m.milk&&o.milk!=='whole')a.push(t('m_'+o.milk));if(o.syrup&&o.syrup!=='none')a.push(t('s_'+o.syrup));if(o.shot)a.push('+shot');if(o.notes)a.push('“'+o.notes+'”');return a.join(' · ')}
+function cartTotals(){let sub=0,tot=0;S.cart.forEach(l=>{sub+=l.unit*l.qty;tot+=l.free?l.unit*(l.qty-1):l.unit*l.qty});return{sub,tot}}
+
+function scrCart(){
+ if(!S.cart.length)return`<div class="scroll"><div class="pad stack" style="gap:16px;padding-top:30px"><h2 class="h-xl">${t('cart_t')}</h2><p class="muted">${t('cart_empty')}</p><button class="btn dark" data-go="menu">${t('see_menu')}</button>${S.orders.length?`<button class="btn line" data-go="orders">${t('orders_t')}</button>`:''}</div></div>`;
+ const {sub,tot}=cartTotals();const freeUsed=S.cart.some(l=>l.free);
+ return`<div class="scroll"><div class="pad stack" style="gap:14px">
+ <button class="back" data-go="menu">${svg('back','width="18" height="18"')} ${t('menu_t')}</button>
+ <h2 class="h-xl">${t('cart_t')}</h2>
+ ${S.cart.map((l,i)=>`<div class="card stack" style="gap:8px"><div class="between"><b style="text-transform:uppercase">${l.qty}× ${esc(l.name)}</b><span class="price">${l.free?`<s class="muted" style="font-weight:500">${mx(l.unit*l.qty)}</s> ${mx(l.unit*(l.qty-1))}`:mx(l.unit*l.qty)}</span></div>
+  ${l.desc?`<div class="small">${esc(l.desc)}</div>`:''}
+  <div class="between">${l.coffee&&(S.free>0||l.free)&&(!freeUsed||l.free)?`<button class="chip-btn" style="${l.free?'background:var(--salvia);border-color:var(--salvia)':''}" data-act="togglefree" data-i="${i}">${l.free?'★ '+t('free_applied'):t('apply_free')}</button>`:'<span></span>'}<button class="chip-btn" data-act="rmline" data-i="${i}" aria-label="Quitar">×</button></div></div>`).join('')}
+ ${S.free>0&&!S.cart.some(l=>l.coffee)?`<p class="small" style="margin:0">${t('freeonly')}</p>`:''}
+ <div class="between" style="padding-top:6px"><span class="muted">${t('subtotal')}</span><span class="price">${mx(sub)}</span></div>
+ <div class="between"><span class="h-m">${t('total')}</span><span class="price" style="font-size:22px">${mx(tot)}</span></div>
+ <button class="btn dark" data-go="checkout">${t('checkout')}</button>
+</div></div>`}
+
+function scrCheckout(){const {tot}=cartTotals();const slots=['10:30','10:45','11:00','11:15','11:30'];
+ const opt=(key,v,title,sub)=>`<button class="card" data-set="${key}" data-val="${v}" style="text-align:left;display:grid;grid-template-columns:22px 1fr;gap:12px;align-items:center;${S[key]===v?'background:var(--negro);color:var(--crema)':''}"><span style="width:20px;height:20px;border-radius:50%;border:2px solid currentColor;display:grid;place-items:center">${S[key]===v?'<i style="width:10px;height:10px;border-radius:50%;background:var(--salvia);display:block"></i>':''}</span><span><b style="text-transform:uppercase;font-size:14px">${title}</b><br><span style="font-size:13px;opacity:.8">${sub}</span></span></button>`;
+ return`<div class="scroll"><div class="pad stack" style="gap:14px">
+ <button class="back" data-go="cart">${svg('back','width="18" height="18"')} ${t('cart_t')}</button>
+ <h2 class="h-l">${t('pickup')}</h2>
+ ${opt('pickup','asap',t('asap'),t('asap_s'))}
+ ${opt('pickup','later',t('later'),t('hours_v').split(' · ')[0])}
+ ${S.pickup==='later'?`<div class="pills">${slots.map(s=>`<button class="pill" aria-pressed="${S.pickTime===s}" data-set="pickTime" data-val="${s}">${s}</button>`).join('')}</div>`:''}
+ <h2 class="h-l" style="margin-top:8px">${t('pay')}</h2>
+ ${opt('pay','app',t('pay_app'),t('pay_app_s'))}
+ ${opt('pay','bar',t('pay_bar'),t('pay_bar_s'))}
+ <div class="label between" style="margin-top:6px"><span><b style="text-transform:uppercase">${esc(S.user.name)}</b><br><span class="small">${S.cart.reduce((a,l)=>a+l.qty,0)} ${S.lang==='es'?'productos':'items'}</span></span><span class="price" style="font-size:22px">${mx(tot)}</span></div>
+ <button class="btn dark" data-act="place">${S.pay==='app'?(S.lang==='es'?'Pagar ':'Pay ')+mx(tot):t('place')}</button>
+ <p class="small" style="margin:0;text-align:center">${S.pay==='app'?(S.lang==='es'?'Pago seguro con Mercado Pago':'Secure payment with Mercado Pago'):(S.lang==='es'?'Puedes cancelar mientras la barra no lo acepte':'You can cancel until the bar accepts it')}</p>
+</div></div>`}
+
+const ST=['received','preparing','ready','done'];
+function scrStatus(){const o=S.orders.find(x=>x.id===S.params.id)||S.orders[0];if(!o)return scrOrders();const idx=ST.indexOf(o.status);
+ return`<div class="scroll"><div class="pad stack" style="gap:16px">
+ <button class="back" data-go="orders">${svg('back','width="18" height="18"')} ${t('orders_t')}</button>
+ <div class="label" style="display:grid;gap:4px;text-align:center;padding:18px"><span class="eyebrow" style="color:var(--negro)">${t('order_n')} #${o.id}</span><span class="h-xl">${esc(S.user.name)}</span><span class="small">${o.when==='ASAP'?t('asap'):o.when} · ${o.pay==='app'?t('paid_app'):t('pay_at_bar')}</span></div>
+ <div class="steps">${ST.map((s,i)=>`<div class="stepi ${i<idx||o.status==='done'?'done':i===idx?'now':''}"><span class="dot">${i<idx||o.status==='done'?'✓':i+1}</span><div><b>${t('st_'+s)}</b><span class="small">${i===idx?t('st_'+s+'_s'):''}</span></div></div>`).join('')}</div>
+ <div class="card"><ul style="margin:0;padding-left:18px">${o.lines.map(l=>`<li><b>${l.qty}× ${esc(l.name)}</b>${l.free?' ★':''}${l.desc?`<br><span class="small">${esc(l.desc)}</span>`:''}</li>`).join('')}</ul><div class="between" style="margin-top:10px"><span class="muted">${t('total')}</span><span class="price">${mx(o.total)}</span></div></div>
+ <div class="card sage row">${svg('pin','width="22" height="22" style="flex:none"')}<span style="font-size:13.5px">${t('address')}</span></div>
+ ${o.status!=='done'?`<button class="btn line" data-act="advance" data-id="${o.id}">${t('simulate')}</button>`:`<button class="btn dark" data-go="rewards">Junio Rewards · ${S.stamps}/7</button>`}
+</div></div>`}
+
+function scrOrders(){const act=S.orders.filter(o=>o.status!=='done'),past=S.orders.filter(o=>o.status==='done');
+ const row=o=>`<button class="list-row" data-go="status" data-id="${o.id}"><span><b>#${o.id}</b> · ${esc(o.lines.map(l=>l.name).join(', '))}<br><span class="small">${t('st_'+o.status)} · ${mx(o.total)}</span></span>${svg('chev','width="18"')}</button>`;
+ return`<div class="scroll"><div class="pad stack" style="gap:12px">
+ <h2 class="h-xl">${t('orders_t')}</h2>
+ ${S.cart.length?`<button class="card ink between" data-go="cart"><b>${t('cart_t')} · ${S.cart.length}</b>${svg('chev','width="18"')}</button>`:''}
+ ${!S.orders.length?`<p class="muted">${t('orders_empty')}</p><button class="btn dark" data-go="menu">${t('see_menu')}</button>`:''}
+ ${act.length?`<div class="h-m">${t('active')}</div>${act.map(row).join('')}`:''}
+ ${past.length?`<div class="h-m" style="margin-top:8px">${t('past')}</div>${past.map(o=>`<div class="list-row"><span><b>#${o.id}</b> · ${esc(o.lines.map(l=>l.name).join(', '))}<br><span class="small">${mx(o.total)}</span></span><button class="chip-btn" data-act="repeat" data-id="${o.id}">${t('repeat')}</button></div>`).join('')}`:''}
+</div></div>`}
+
+function scrProfile(){const tg=(k,l)=>`<div class="list-row"><span>${l}</span><button class="toggle" role="switch" aria-checked="${S.notif[k]}" aria-label="${l}" data-notif="${k}"></button></div>`;
+ return`<div class="scroll"><div class="pad stack" style="gap:6px">
+ <h2 class="h-xl" style="margin-bottom:8px">${t('profile_t')}</h2>
+ <div class="card ink between" style="margin-bottom:10px"><div><span class="h-l" style="font-size:22px">${esc(S.user.name)}</span><div class="small" style="color:var(--salvia-cl)">+52 ${esc(S.user.phone)}</div></div><button class="chip-btn" style="border-color:var(--crema);color:var(--crema)" data-go="name">${t('edit')}</button></div>
+ <div class="h-m" style="margin-top:8px">${t('lang')}</div>
+ <div class="pills" style="padding:8px 0 10px">${['es','en'].map(l=>`<button class="pill" aria-pressed="${S.lang===l}" data-lang="${l}">${l==='es'?'Español':'English'}</button>`).join('')}</div>
+ <div class="h-m" style="margin-top:8px">${t('notif')}</div>
+ ${tg('orders',t('n_orders'))}${tg('rewards',t('n_rewards'))}${tg('promos',t('n_promos'))}
+ <button class="list-row" data-go="orders"><span>${t('orders_t')}</span>${svg('chev','width="18"')}</button>
+ <button class="list-row" data-go="rewards"><span>${t('history')}</span>${svg('chev','width="18"')}</button>
+ <div class="list-row"><span>${t('payment')}</span><span class="small">•••• 4242</span></div>
+ <button class="list-row" data-go="barinfo"><span>${t('bar')}</span>${svg('chev','width="18"')}</button>
+ <button class="list-row" data-act="askdel" style="color:var(--alerta)"><span>${t('delete')}</span></button>
+</div></div>`}
+
+function scrBarinfo(){return`<div class="scroll"><div style="background:var(--negro);color:var(--crema);padding:8px 20px 26px;position:relative;overflow:hidden">
+ <button class="back" data-go="home" style="color:var(--crema)">${svg('back','width="18" height="18"')} ${t('tab_home')}</button>
+ <svg class="star" viewBox="0 0 24 24" style="width:110px;right:-20px;top:30px">${IC.star}</svg>
+ <p class="brush" style="font-size:40px;margin-top:14px;position:relative">${t('bar')}</p>
+ <p style="margin:8px 0 0;color:var(--salvia-cl);max-width:32ch;position:relative">${S.lang==='es'?'Un solo lugar, en el centro de San José. Ladrillo blanco, ventanas en arco y el mar a unas cuadras.':'One place, in downtown San José. White brick, arched windows and the sea a few blocks away.'}</p></div>
+ <div class="pad stack" style="gap:14px;padding-top:18px">
+  <div class="card row" style="align-items:flex-start">${svg('pin','width="22" height="22" style="flex:none"')}<div><b>${t('address')}</b><div class="small">${S.lang==='es'?'Busca la escalera junto a la puerta y sube al 2do piso.':'Look for the stairs by the door and head up to the 2nd floor.'}</div></div></div>
+  <div class="card"><div class="between"><span class="h-m">${t('hours')}</span><span class="tag ${isOpen()?'':'out'}">${isOpen()?t('open_now'):t('closed_now')}</span></div><div style="margin-top:8px;font-size:14px;display:grid;gap:4px">${t('hours_v').split(' · ').map(x=>`<span>${x}</span>`).join('')}</div></div>
+  <div class="label"><span class="eyebrow" style="color:var(--negro)">${t('guest')}</span><div class="h-m" style="margin-top:4px">${esc(S.guest.roaster)}</div><div class="small">${esc(S.guest.origin)} · ${esc(S.guest.notes)}</div></div>
+  <div class="card sage"><span class="h-m">${S.lang==='es'?'El equipo':'The team'}</span><div class="row" style="margin-top:10px;gap:14px">${['Ana','Luis','Caro'].map(n=>`<div style="display:grid;justify-items:center;gap:4px"><span style="width:52px;height:52px;border-radius:50%;background:var(--hueso);border:1.5px solid var(--negro);display:grid;place-items:center;font-weight:900">${n[0]}</span><span class="small" style="color:var(--negro)">${n}</span></div>`).join('')}</div><p class="small" style="margin:10px 0 0;color:var(--negro)">${S.lang==='es'?'Nombres y fotos de ejemplo; se cargan los reales.':'Sample names and photos; the real ones get loaded.'}</p></div>
+  <a class="btn line" href="https://www.instagram.com/junioycafe/" target="_blank" rel="noopener">@junioycafe</a>
+ </div></div>`}
+
+const RENDER={welcome:scrWelcome,phone:scrPhone,code:scrCode,name:scrName,wstamp:scrWstamp,home:scrHome,rewards:scrRewards,menu:scrMenu,product:scrProduct,cart:scrCart,checkout:scrCheckout,status:scrStatus,orders:scrOrders,profile:scrProfile,barinfo:scrBarinfo};
+
+function phoneHTML(){
+ const s=S.screen,tab=TABS[s],dark=s==='welcome';
+ const tb=tab?`<nav class="tabbar">${[['home','home','tab_home'],['menu','menu','tab_menu'],['rewards','qr','tab_rewards'],['orders','bag','tab_orders'],['profile','user','tab_profile']].map(([sc,ic,lb])=>sc==='rewards'?`<button class="mid" data-go="rewards" aria-current="${tab==='rewards'}"><span class="disc">${svg('qr','width="26" height="26"')}</span>${t(lb)}</button>`:`<button data-go="${sc==='orders'&&S.cart.length?'cart':sc}" aria-current="${tab===sc}">${svg(ic)}${t(lb)}</button>`).join('')}</nav>`:'';
+ return`<div class="phone"><div class="screen"><div class="status ${dark?'dark':''}"><span>${clock()}</span><span class="isl"></span><span>5G ▮▮▮</span></div>${RENDER[s]()}${tb}<div id="overlay"></div></div></div>`;
+}
+
+function viewCliente(){
+ const idx=SCREENS.findIndex(x=>x[0]===S.screen);
+ return`<div class="intro"><h1>App de<br>clientes</h1><p>Todo es clicable. Usa la lista para saltar a cualquier pantalla, o recórrela como cliente desde la bienvenida. Lo que hagas aquí se refleja en la App de barra y en el Panel del dueño.</p></div>
+ <div class="stage">
+  <aside class="index"><h3>Pantallas</h3><ol>${SCREENS.map(([k,l],i)=>`<li><button data-jump="${k}" aria-current="${k===S.screen}"><span class="n">${String(i+1).padStart(2,'0')}</span>${l}</button></li>`).join('')}</ol></aside>
+  ${phoneHTML()}
+  <aside class="notes">
+   <div class="note-card"><h3>${idx>=0?SCREENS[idx][1]:''}</h3><ul>${(NOTES[S.screen]||[]).map(n=>`<li>${n}</li>`).join('')}</ul></div>
+   <div class="note-card"><h3>Controles de demo</h3><p class="small">Hacen lo que en la vida real haría el barista o el paso del tiempo.</p>
+    <div class="demo-btns"><button class="chip-btn" data-act="barstamp">Dar sello en barra</button><button class="chip-btn" data-act="nextday">Pasar al día siguiente</button><button class="chip-btn" data-act="six">Ir a 6 de 7</button><button class="chip-btn" data-act="reset">Reiniciar demo</button></div>
+    <p class="small" style="margin-top:10px">Sellos: <b>${S.stamps}/7</b> · Bebidas gratis: <b>${S.free}</b> · Sello de hoy: <b>${S.stampedToday?'ya dado':'disponible'}</b></p></div>
+   <div class="note-card"><h3>Sobre la tipografía</h3><p class="small">Los títulos usan Archivo condensada como sustituto de Owners Text mientras se confirma la licencia para app. Los encabezados del menú imitan la letra de pincel del menú impreso; en la app real se exportan del archivo original.</p></div>
+  </aside>
+ </div>`;
+}
+
+/* ================== barista ================== */
+function allOrders(){return[...S.orders.map(o=>({id:o.id,name:S.user.name,items:o.lines.map(l=>`${l.qty}× ${l.name}${l.desc?' · '+l.desc:''}${l.free?' ★ gratis':''}`),status:o.status,pay:o.pay,when:o.when,mine:true})),...S.extraOrders]}
+function viewBarista(){
+ const tab=S.barTab;let body='';
+ if(tab==='orders'){
+  const cols=[['received','Nuevos','Aceptar'],['preparing','Preparando','Marcar listo'],['ready','Listos para entregar','Entregar']];
+  const os=allOrders();
+  body=`<div class="cols">${cols.map(([st,lb,act])=>{const list=os.filter(o=>o.status===st);return`<section class="col"><h4><span>${lb}</span><span>${list.length}</span></h4>${list.map(o=>`<div class="ticket ${st==='received'?'new':''}"><div class="between"><span class="who">${esc(o.name)}</span><span class="small">#${o.id}</span></div><ul>${o.items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul><div class="between"><span class="tag ${o.pay==='app'?'':'out'}">${o.pay==='app'?'Pagado':'Cobrar en barra'}</span><span class="small">${o.when==='ASAP'?'Lo antes posible':'Para '+o.when}</span></div><button class="btn ${st==='ready'?'sage':'dark'}" style="padding:11px" data-bar="${o.id}" data-mine="${o.mine?1:0}">${act}</button></div>`).join('')||'<p class="small" style="margin:0">Nada por aquí.</p>'}</section>`}).join('')}</div>
+  <p class="small" style="margin-top:14px">Al entrar un pedido nuevo suena una campana. Al tocar "Entregar", el pedido se cierra y la app le suma el sello al cliente (si no lo ha ganado hoy). Haz un pedido en la App de clientes para verlo aparecer aquí.</p>`;
+ }else if(tab==='scan'){
+  body=`<div class="scan"><div class="viewfinder"><div class="frame"><div class="laser"></div></div><span style="position:absolute;bottom:14px;font-size:13px">Apunta al QR del cliente</span></div>
+  <div class="stack">${!S.scanned?`<div class="card stack"><span class="h-m">Escanear cliente</span><p class="small" style="margin:0">La cámara de la tablet lee el QR dinámico. Si el código tiene más de 60 segundos, se rechaza.</p><button class="btn dark" data-act="doscan">Simular escaneo de ${esc(S.user.name)}</button></div>`:
+  `<div class="card stack" style="gap:14px"><div class="between"><div><span class="eyebrow">Cliente verificado</span><div class="h-l">${esc(S.user.name)}</div><span class="small">+52 ${esc(S.user.phone)}</span></div><div class="price" style="font-size:34px">${S.stamps}/7</div></div>
+   <div class="meter"><i style="width:${S.stamps/7*100}%"></i></div>
+   <div class="between"><span>Bebidas gratis guardadas</span><b>${S.free}</b></div>
+   ${S.stampedToday?`<div class="alert">Ya recibió su sello hoy. Máximo 1 por día.</div>`:''}
+   <label class="row" style="font-size:14px"><input type="checkbox" id="hasdrink" checked> La compra incluye al menos una bebida</label>
+   <button class="btn dark" data-act="scanstamp" ${S.stampedToday?'disabled':''}>Dar sello</button>
+   <button class="btn sage" data-act="redeem" ${S.free?'':'disabled'}>Canjear bebida gratis</button>
+   <p class="small" style="margin:0">Cada sello queda registrado con barista, hora y ticket.</p>
+   <button class="chip-btn" data-act="unscan">Escanear otro</button></div>`}</div></div>`;
+ }else{
+  body=`<div class="two"><section class="stack"><span class="h-m">Postres del día</span><p class="small" style="margin:0">Cambian cada día. Dalos de alta en la mañana y márcalos agotados cuando se acaben.</p>
+   ${S.desserts.map(d=>`<div class="list-row"><span><b>${esc(d.name)}</b> <span class="small">${mx(d.price)}</span></span><span class="row"><span class="small">${d.out?'Agotado':'Disponible'}</span><button class="toggle" role="switch" aria-checked="${!d.out}" aria-label="${esc(d.name)} disponible" data-dessert="${d.id}"></button></span></div>`).join('')}
+   <div class="row" style="margin-top:6px"><input id="newd" placeholder="Nuevo postre" style="flex:1;border:1.5px solid var(--negro);border-radius:10px;padding:10px;min-width:0"><select id="newdp" style="border:1.5px solid var(--negro);border-radius:10px;padding:10px"><option>40</option><option>60</option><option selected>80</option></select><button class="chip-btn" data-act="adddessert">Agregar</button></div></section>
+   <section class="stack"><span class="h-m">Agotar del menú</span><p class="small" style="margin:0">Se apaga al instante en la app de clientes.</p>
+   ${MENU.filter(m=>!m.food).slice(0,14).map(m=>`<div class="list-row"><span>${esc(m.name)}</span><button class="toggle" role="switch" aria-checked="${!S.soldout[m.id]}" aria-label="${esc(m.name)} disponible" data-sold="${m.id}"></button></div>`).join('')}</section></div>`;
+ }
+ return`<div class="intro"><h1>App de<br>barra</h1><p>Corre en la tablet o el celular del café. Cada barista entra con su PIN. Tres cosas: la cola de pedidos, escanear el QR para sellar o canjear, y apagar lo que se acabó.</p></div>
+ <div class="tablet"><div class="screen"><div class="bar-top"><span class="logo word"></span><span style="flex:1;font-size:13px;color:var(--salvia-cl)">Barra · turno de Ana (PIN)</span>
+  <nav class="seg">${[['orders','Pedidos'],['scan','Escanear QR'],['sold','Agotados']].map(([k,l])=>`<button aria-pressed="${tab===k}" data-bartab="${k}">${l}</button>`).join('')}</nav></div>
+  <div class="bar-body">${body}</div></div></div>`;
+}
+
+/* ================== owner ================== */
+function viewDueno(){
+ const tab=S.deskTab;let main='';
+ if(tab==='hoy'){
+  main=`<div class="between"><h3 class="h-l" style="font-size:24px">Hoy</h3><span class="small">Cifras de ejemplo + lo que hagas en el demo</span></div>
+  <div class="kpis"><div class="kpi"><div class="l">Ventas en la app</div><div class="v">${mx(S.stats.sales)}</div></div><div class="kpi"><div class="l">Pedidos en la app</div><div class="v">${S.stats.orders}</div></div><div class="kpi"><div class="l">Sellos dados</div><div class="v">${S.stats.stamps}</div></div><div class="kpi"><div class="l">Bebidas canjeadas</div><div class="v">${S.stats.redeems}</div></div></div>
+  <div class="stack"><span class="h-m">Alertas</span><div class="alert"><b>Ejemplo:</b> una cuenta intentó sellar 3 veces hoy. Se bloquearon 2 por la regla de 1 sello al día.</div><p class="small" style="margin:0">También avisa si un barista da muchos sellos fuera de lo normal.</p></div>
+  <div class="stack"><span class="h-m">Últimos sellos</span><div class="tbl-wrap"><table><thead><tr><th>Hora</th><th>Cliente</th><th>Barista</th><th>Tipo</th></tr></thead><tbody>
+   ${[['10:12','Diego R.','Ana','Sello'],['10:05','Mariana L.','Luis','Canje'],['09:51','Jorge P.','Ana','Sello'],['09:40','Valeria C.','Ana','Bienvenida']].map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+ }else if(tab==='menu'){
+  main=`<div class="between"><h3 class="h-l" style="font-size:24px">Menú y precios</h3><span class="small">Los cambios se ven en la app al instante</span></div>
+  <div class="tbl-wrap"><table><thead><tr><th>Producto</th><th>Categoría</th><th>Precio MXN</th><th>Suma sello</th><th>Canjeable</th><th>Disponible</th></tr></thead><tbody>
+  ${MENU.map(m=>`<tr><td><b>${esc(m.name)}</b> <span class="small">${m.size}</span></td><td>${T.es['cat_'+m.cat]}</td><td><input class="price-in" id="p-${m.id}" type="number" value="${price(m.id)}" data-price="${m.id}" aria-label="Precio ${esc(m.name)}"></td><td>${m.food?'<span class="tag out">No</span>':'<span class="tag">Sí</span>'}</td><td>${m.coffee?'<span class="tag ink">Sí</span>':'<span class="tag out">No</span>'}</td><td><button class="toggle" role="switch" aria-checked="${!S.soldout[m.id]}" aria-label="${esc(m.name)} disponible" data-sold="${m.id}"></button></td></tr>`).join('')}
+  </tbody></table></div><p class="small" style="margin:0">"Suma sello" y "Canjeable" siguen las reglas de la fase 1: todas las bebidas suman, solo las de café se canjean. Los extras van como opciones de cada bebida.</p>`;
+ }else if(tab==='guest'){
+  const f=(k,l)=>`<div class="field"><label for="g-${k}">${l}</label><input id="g-${k}" value="${esc(S.guest[k])}" data-guest="${k}"></div>`;
+  main=`<h3 class="h-l" style="font-size:24px">Guest Beans</h3><div class="two"><div class="stack">${f('roaster','Tostador')}${f('origin','Origen')}${f('process','Proceso')}${f('alt','Altura')}${f('notes','Notas de cata')}<button class="btn dark" data-act="saveguest">Publicar en la app</button></div>
+  <div class="stack"><span class="eyebrow">Así se ve en Inicio</span><div class="label" style="display:grid;gap:6px"><span class="eyebrow" style="color:var(--negro)">Guest Beans del mes</span><div class="h-l" style="font-size:24px" id="gp-roaster">${esc(S.guest.roaster)}</div><div style="font-size:13.5px" id="gp-line">${esc(S.guest.origin)} · ${esc(S.guest.process)} · ${esc(S.guest.alt)}</div><i style="font-size:13.5px" id="gp-notes">${esc(S.guest.notes)}</i></div><p class="small">Datos de ejemplo. El dueño carga el tostador real cada mes; los baristas también pueden editarlo desde su app.</p></div></div>`;
+ }else{
+  main=`<h3 class="h-l" style="font-size:24px">Equipo y accesos</h3><div class="tbl-wrap"><table><thead><tr><th>Nombre</th><th>Rol</th><th>Puede</th></tr></thead><tbody><tr><td>Dueño</td><td>Dueño</td><td>Todo, ventas, alertas</td></tr><tr><td>Ana</td><td>Barista (PIN)</td><td>Pedidos, sellos, agotados, menú, Guest Beans</td></tr><tr><td>Luis</td><td>Barista (PIN)</td><td>Pedidos, sellos, agotados, menú, Guest Beans</td></tr></tbody></table></div><p class="small">Nombres de ejemplo.</p>`;
+ }
+ return`<div class="intro"><h1>Panel del<br>dueño</h1><p>Página web para la compu o el celular del dueño. Edita menú, precios y Guest Beans, y ve sellos, canjes y ventas de la app del día.</p></div>
+ <div class="desk"><div class="desk-top"><span class="logo word"></span><b>Panel</b><span class="small" style="flex:1">junio · admin</span></div>
+ <div class="desk-grid"><nav class="side">${[['hoy','Hoy'],['menu','Menú y precios'],['guest','Guest Beans'],['team','Equipo']].map(([k,l])=>`<button aria-current="${tab===k}" data-desk="${k}">${l}</button>`).join('')}</nav><div class="desk-main">${main}</div></div></div>`;
+}
+
+/* ================== stack ================== */
+function viewStack(){return`<div class="intro"><h1>Tecnología</h1><p>Recomendación corta para la semana 3, pensada para un café de un solo local con Square en caja y terminal de Mercado Pago.</p></div>
+<div class="doc">
+ <section class="verdict"><svg class="star" viewBox="0 0 24 24" style="width:120px;right:-24px;top:-20px">${IC.star}</svg>
+  <span class="eyebrow" style="color:var(--salvia-cl)">Recomendación</span>
+  <div class="big">React Native con Expo<br><em>+ Supabase</em></div>
+  <p style="margin:0;color:var(--crema);max-width:62ch">Un solo lenguaje (TypeScript) para las tres piezas: app de clientes, app de barra y panel del dueño en web. Menos código, un solo equipo y menos costo de mantenimiento, que es lo que más pesa en un negocio de un local.</p></section>
+ <section><h2>Por qué</h2><ul>
+  <li><b>Expo</b> compila para iOS y Android desde un solo proyecto, publica en las tiendas con su servicio de builds y permite mandar correcciones sin esperar revisión de Apple en cambios menores.</li>
+  <li><b>La app de barra</b> puede ser la misma app con un rol de barista, o una segunda app pequeña que comparte el código. El panel del dueño se hace en web (Next.js) reutilizando los mismos tipos y reglas.</li>
+  <li><b>Supabase</b> es una base de datos Postgres. Las reglas de Junio Rewards son relacionales: 1 sello por día por cliente, vencimiento a 6 meses desde la última visita, bebida gratis a 60 días, registro de quién dio cada sello. En Postgres eso se garantiza con restricciones y no depende del código de la app.</li>
+  <li><b>Tiempo real</b> incluido: el pedido aparece en la tablet de la barra al instante y el estado le llega al cliente sin recargar.</li>
+  <li><b>Funciones del servidor</b> (Edge Functions) para recibir los avisos de pago de Mercado Pago, firmar el QR dinámico y, en la fase 2, conectar con Square.</li>
+ </ul></section>
+ <section><h2>Las alternativas</h2><div class="tbl-wrap"><table><thead><tr><th></th><th>Elegido</th><th>Alternativa</th><th>Cuándo elegir la alternativa</th></tr></thead><tbody>
+  <tr><td><b>App</b></td><td>React Native + Expo</td><td>Flutter</td><td>Si el equipo de desarrollo ya domina Dart. Flutter da animaciones muy finas, pero el panel web quedaría en otra tecnología.</td></tr>
+  <tr><td><b>Backend</b></td><td>Supabase</td><td>Firebase</td><td>Si se quiere todo en Google. Firebase es excelente para notificaciones, pero su base de datos es de documentos y las reglas de sellos se vuelven más difíciles de garantizar.</td></tr>
+ </tbody></table></div><p class="small" style="margin-top:8px">Las notificaciones push funcionan igual con cualquiera de los dos: Expo Notifications usa Apple y Firebase Cloud Messaging por debajo.</p></section>
+ <section><h2>Pagos y caja</h2><ul>
+  <li><b>Mercado Pago (MVP).</b> Cobro con tarjeta dentro de la app usando su SDK y tarjetas guardadas. El pago se confirma en el servidor con el aviso (webhook) de Mercado Pago antes de mandar el pedido a la barra. Los pagos en barra siguen en la terminal actual.</li>
+  <li><b>Apple Pay y Google Pay:</b> hay que confirmar con Mercado Pago México que estén disponibles para esta cuenta. Si no, el MVP sale con tarjeta y se agregan después.</li>
+  <li><b>Comisión de las tiendas:</b> Apple y Google no cobran comisión por vender café y comida (son bienes físicos), así que se puede usar Mercado Pago sin pasar por sus sistemas de pago.</li>
+  <li><b>Square (fase 2).</b> Su API permite crear los pedidos de la app como tickets en Square y leer las ventas de barra para ligar cada sello a un ticket real. En el MVP el barista sella con el QR.</li>
+ </ul></section>
+ <section><h2>Qué validar con el dueño esta semana</h2><ul>
+  <li>Que la tarjeta de estampillas y los textos ("Ya casi huele a gratis") suenen a Junio.</li>
+  <li>El flujo de pedido completo, incluyendo pagar en la app o en barra.</li>
+  <li>Que la app de barra sea suficiente para hora pico.</li>
+  <li>Licencia de Owners Text para app móvil, y si podemos exportar las letras de pincel del menú.</li>
+  <li>Fotos reales del equipo y del espacio para la pantalla "La barra".</li>
+ </ul></section>
+</div>`}
+
+/* ================== render & events ================== */
+let toastT,pushT;
+function toast(msg){const o=document.getElementById('overlay');if(!o)return;o.insertAdjacentHTML('beforeend',`<div class="toast" role="status">${esc(msg)}</div>`);clearTimeout(toastT);toastT=setTimeout(()=>{o.querySelectorAll('.toast').forEach(e=>e.remove())},2600)}
+let pendingPush=null;
+function push(msg){pendingPush=msg}
+function showPush(){if(!pendingPush)return;const o=document.getElementById('overlay');if(!o)return;o.querySelectorAll('.push').forEach(e=>e.remove());o.insertAdjacentHTML('beforeend',`<div class="push" role="status"><span class="ic"><span class="logo word"></span></span><div><b>Junio · ${S.lang==='es'?'ahora':'now'}</b><p>${esc(pendingPush)}</p></div></div>`);pendingPush=null;clearTimeout(pushT);pushT=setTimeout(()=>o.querySelectorAll('.push').forEach(e=>e.remove()),4200)}
+
+function render(){
+ document.querySelectorAll('.top .seg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.view===S.view));
+ const app=document.getElementById('app');
+ const sc=document.querySelector('.scroll'),keep=sc?sc.scrollTop:0,sameScreen=render.last===S.view+S.screen;
+ app.innerHTML=S.view==='cliente'?viewCliente():S.view==='barista'?viewBarista():S.view==='dueno'?viewDueno():viewStack();
+ if(sameScreen){const n=document.querySelector('.scroll');if(n)n.scrollTop=keep}
+ render.last=S.view+S.screen;
+ tick();showPush();
+ if(S.popIdx>=0)setTimeout(()=>{S.popIdx=-1},800);
+}
+function tick(){const r=document.getElementById('ring');if(!r)return;const left=60-Math.floor(Date.now()/1000)%60;const c=2*Math.PI*9;
+ r.innerHTML=`<svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="9" fill="none" stroke="#CED2BB" stroke-width="3"/><circle cx="11" cy="11" r="9" fill="none" stroke="#1D1D1B" stroke-width="3" stroke-dasharray="${c}" stroke-dashoffset="${c*(1-left/60)}"/></svg>${t('new_in')} 0:${String(left).padStart(2,'0')}`;
+ if(left===60||!tick.tok||tick.tok!==qrToken()){tick.tok=qrToken();const q=document.getElementById('qr');if(q)q.innerHTML=qrSvg(tick.tok)}}
+setInterval(tick,1000);
+
+function setView(v){S.view=v;if(location.hash!=='#'+v)history.replaceState(null,'','#'+v);render();window.scrollTo(0,0)}
+function placeOrder(){
+ const {tot}=cartTotals();const id='J-0'+(++S.orderSeq);
+ S.orders.unshift({id,lines:S.cart.map(l=>({...l})),total:tot,status:'received',pay:S.pay,when:S.pickup==='asap'?'ASAP':S.pickTime});
+ if(S.cart.some(l=>l.free)){S.free--;S.stats.redeems++}
+ S.stats.orders++;if(S.pay==='app')S.stats.sales+=tot;
+ S.cart=[];go('status',{id});
+}
+function advance(id){
+ const o=S.orders.find(x=>x.id===id);if(o){const i=ST.indexOf(o.status);if(i<3){o.status=ST[i+1];if(o.status==='ready')push(t('push_ready',{name:S.user.name}));if(o.status==='done'){if(o.pay==='bar')S.stats.sales+=o.total;giveStamp(S.lang==='es'?'Pedido #'+o.id:'Order #'+o.id)}}return}
+ const e=S.extraOrders.find(x=>x.id===id);if(e){const i=ST.indexOf(e.status);if(i<2)e.status=ST[i+1];else S.extraOrders=S.extraOrders.filter(x=>x!==e)}
+}
+
+document.addEventListener('click',e=>{
+ const b=e.target.closest('button,[data-go]');if(!b)return;
+ const d=b.dataset;
+ if(d.view){setView(d.view);return}
+ if(d.jump){go(d.jump,d.jump==='product'?{id:'latte'}:d.jump==='status'?{id:S.orders[0]?.id}:{});if(d.jump==='status'&&!S.orders.length){S.orders.push({id:'J-024',lines:[{name:'Latte',qty:1,unit:80,desc:'Avena',coffee:true}],total:100,status:'preparing',pay:'app',when:'ASAP'});S.orderSeq=24;go('status',{id:'J-024'})}return}
+ if(d.lang){S.lang=d.lang;render();return}
+ if(d.cat&&!d.go){S.params.cat=d.cat;render();return}
+ if(d.go){const p={};if(d.id)p.id=d.id;if(d.cat)p.cat=d.cat;go(d.go,p);return}
+ if(d.opt){const o=S.params.o;if(d.opt==='shot')o.shot=!o.shot;else if(d.opt==='qty')o.qty=Math.max(1,o.qty+(+d.val));else o[d.opt]=d.val;const nt=document.getElementById('nt');if(nt)o.notes=nt.value;render();return}
+ if(d.set){S[d.set]=d.val;render();return}
+ if(d.notif){S.notif[d.notif]=!S.notif[d.notif];render();return}
+ if(d.bartab){S.barTab=d.bartab;render();return}
+ if(d.desk){S.deskTab=d.desk;render();return}
+ if(d.dessert){const x=S.desserts.find(y=>y.id===d.dessert);x.out=!x.out;render();return}
+ if(d.sold){S.soldout[d.sold]=!S.soldout[d.sold];render();return}
+ if(d.bar){if(d.mine==='1'){advance(d.bar);}else advance(d.bar);render();return}
+ const a=d.act;if(!a)return;
+ if(a==='sendcode'){S.user.phone=document.getElementById('ph').value||S.user.phone;go('code')}
+ else if(a==='savename'){S.user.name=(document.getElementById('nm').value||'Sofía').trim();S.user.bday=document.getElementById('bd').value;if(S.stamps===0&&!S.log.length){S.stamps=1;S.popIdx=0;S.log.unshift({d:S.lang==='es'?'hoy':'today',what:S.lang==='es'?'Sello de bienvenida':'Welcome stamp',type:'+1'})}go(S.log.length===1&&S.screen==='name'?'wstamp':'home')}
+ else if(a==='addcart'){const m=prodById(S.params.id);const o=S.params.o;const nt=document.getElementById('nt');if(nt)o.notes=nt.value;S.cart.push({id:m.id,name:m.name+(m.size?' '+m.size:''),qty:o.qty,unit:optPrice(m,o),desc:lineDesc(m,o),coffee:!!m.coffee,free:false});go('menu',{cat:m.cat});toast(t('added'))}
+ else if(a==='togglefree'){const l=S.cart[+d.i];l.free=!l.free;render()}
+ else if(a==='rmline'){S.cart.splice(+d.i,1);render()}
+ else if(a==='place')placeOrder();
+ else if(a==='advance'){advance(d.id);render()}
+ else if(a==='repeat'){const src=d.id?S.orders.find(o=>o.id===d.id):null;S.cart=src?src.lines.map(l=>({...l,free:false})):[{id:'shaken',name:'Junio shaken espresso 20oz',qty:1,unit:120,desc:t('m_oat'),coffee:true,free:false}];go('cart')}
+ else if(a==='askdel'){document.getElementById('overlay').innerHTML=`<div class="sheet"><div class="body"><span class="h-l">${t('delete_q')}</span><p style="margin:0">${t('delete_s')}</p><button class="btn dark" data-act="dodel">${t('confirm_del')}</button><button class="btn line" data-act="closesheet">${t('cancel')}</button></div></div>`}
+ else if(a==='closesheet')render();
+ else if(a==='dodel'){const v=S.view;S=fresh();S.view=v;render()}
+ else if(a==='barstamp'){giveStamp(S.lang==='es'?'Compra en barra':'Bar purchase');if(S.view==='cliente'&&!['rewards','home'].includes(S.screen))S.screen='rewards';render()}
+ else if(a==='nextday'){S.stampedToday=false;S.scanned=S.scanned;render()}
+ else if(a==='six'){S.stamps=6;S.stampedToday=false;if(!S.log.length)S.log.unshift({d:'',what:'Sellos anteriores',type:'+6'});go('rewards')}
+ else if(a==='reset'){const v=S.view;S=fresh();S.view=v;render()}
+ else if(a==='doscan'){S.scanned=true;render()}
+ else if(a==='unscan'){S.scanned=false;render()}
+ else if(a==='scanstamp'){if(!document.getElementById('hasdrink').checked){alertInline('Sin bebida no hay sello.');return}giveStamp(S.lang==='es'?'Compra en barra':'Bar purchase');pendingPush=null;render()}
+ else if(a==='redeem'){S.free--;S.stats.redeems++;S.log.unshift({d:'',what:S.lang==='es'?'Bebida gratis canjeada':'Free drink redeemed',type:'★'});render()}
+ else if(a==='adddessert'){const n=document.getElementById('newd').value.trim();if(!n)return;S.desserts.push({id:'d'+Date.now(),name:n,price:+document.getElementById('newdp').value,out:false});render()}
+ else if(a==='saveguest'){document.querySelectorAll('[data-guest]').forEach(i=>S.guest[i.dataset.guest]=i.value);const btn=b;btn.textContent='Publicado ✓';setTimeout(()=>{btn.textContent='Publicar en la app'},1500)}
+});
+function alertInline(m){const c=document.querySelector('.scan .card');if(c)c.insertAdjacentHTML('afterbegin',`<div class="alert">${esc(m)}</div>`)}
+document.addEventListener('input',e=>{const el=e.target;
+ if(el.dataset.price){const v=parseInt(el.value,10);if(!isNaN(v))S.prices[el.dataset.price]=v}
+ if(el.dataset.guest){S.guest[el.dataset.guest]=el.value;const r=document.getElementById('gp-roaster');if(r){r.textContent=S.guest.roaster;document.getElementById('gp-line').textContent=`${S.guest.origin} · ${S.guest.process} · ${S.guest.alt}`;document.getElementById('gp-notes').textContent=S.guest.notes}}
+ if(el.id==='nt'&&S.params.o)S.params.o.notes=el.value;
+});
+const startView=()=>{const h=location.hash.slice(1);return['cliente','barista','dueno','stack'].includes(h)?h:'cliente'};
+window.addEventListener('hashchange',()=>{const v=startView();if(v!==S.view){S.view=v;render()}});
+S.view=startView();render();
+</script>
