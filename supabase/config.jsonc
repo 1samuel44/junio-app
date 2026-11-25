@@ -494,5 +494,13 @@
       // and column/key alignment. Set to "null" to emit raw, unformatted SQL.
       // "format_options": "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}",
     }
+  },
+
+  // Funciones de Mercado Pago. Mercado Pago no manda sesión de Supabase,
+  // así que el webhook y la página de regreso no piden JWT (el webhook verifica el pago con la API de MP).
+  "functions": {
+    "mp-crear-pago": { "verify_jwt": true },
+    "mp-webhook": { "verify_jwt": false },
+    "mp-regreso": { "verify_jwt": false }
   }
 }

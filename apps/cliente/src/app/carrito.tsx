@@ -80,7 +80,7 @@ export default function Cart() {
         <View style={{ gap: space(2) }}>
           <T variant="label">{t.payHow}</T>
           <PayOption selected={method === 'barra'} title={t.payBar} hint={t.payBarHint} onPress={() => setMethod('barra')} />
-          <PayOption selected={false} disabled title={t.payApp} hint={t.payAppSoon} onPress={() => {}} />
+          <PayOption selected={method === 'app'} title={t.payApp} hint={t.payAppHint} onPress={() => setMethod('app')} />
         </View>
 
         <TextInput
@@ -105,7 +105,7 @@ export default function Cart() {
         {sending ? (
           <ActivityIndicator color={colors.negro} size="large" />
         ) : (
-          <Button title={`${t.placeOrder} · ${money(totals.total)}`} onPress={place} disabled={!open} />
+          <Button title={`${method === 'app' && totals.total > 0 ? t.payAndOrder : t.placeOrder} · ${money(totals.total)}`} onPress={place} disabled={!open} />
         )}
       </View>
     </View>

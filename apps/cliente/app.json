@@ -34,7 +34,8 @@
           "imageWidth": 180,
           "backgroundColor": "#F1EDE6"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "scheme": "junio",
     "experiments": {

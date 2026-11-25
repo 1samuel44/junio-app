@@ -13,7 +13,7 @@ App de iOS y Android (React Native + Expo SDK 58, TypeScript, Expo Router).
 - **Junio Rewards:** 7 sellos + la 8ª gratis, QR de un solo uso que cambia cada 60 s (la barra lo escanea para dar el sello).
 - **Perfil:** español / inglés, cerrar sesión.
 
-Pagar en la app (Mercado Pago) llega en la etapa 3.
+**Pagar en la app (Mercado Pago Checkout Pro):** la app crea el pedido y llama a la función `mp-crear-pago`, que cobra el total calculado en el servidor. El cliente paga en la página de Mercado Pago y regresa a la app. El pedido se marca pagado (y da el sello) solo cuando Mercado Pago avisa a `mp-webhook` y el pago se verifica con su API. Las funciones están en `supabase/functions/` y se publican al unir a `main`. Necesitan el secreto `MP_ACCESS_TOKEN` en Supabase (Edge Functions → Secrets).
 
 **El servidor decide todo:** precios, sellos y recompensas los calculan las funciones de `supabase/migrations/` (`create_order`, `award_stamp`, `scan_qr`, `issue_qr_token`). La app solo muestra.
 
