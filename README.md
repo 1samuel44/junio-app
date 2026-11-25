@@ -8,7 +8,7 @@ App de Junio y Café (San José del Cabo) para iOS y Android: menú, pedidos par
 
 | Carpeta | Qué hay |
 |---|---|
-| `apps/cliente/` | App para clientes (React Native + Expo, TypeScript). *Por crear en la fase 4.* |
+| `apps/cliente/` | App para clientes (React Native + Expo, TypeScript). Ver `apps/cliente/README.md`. |
 | `apps/panel/` | Panel del dueño y "modo barra" para baristas (Next.js). *Por crear en la fase 4.* |
 | `supabase/esquema.sql` | Esquema de base de datos con las reglas de lealtad aplicadas en el servidor. |
 | `supabase/tests/` | Pruebas de las reglas (probadas en Postgres 16). |
