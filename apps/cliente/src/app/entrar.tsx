@@ -1,7 +1,7 @@
 // Inicio de sesión con código por correo (Supabase Auth). Si el correo es nuevo, crea la cuenta
 // y el servidor da el sello de bienvenida.
-import { Redirect } from 'expo-router';
-import { useState } from 'react';
+import { Redirect, useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,6 +18,21 @@ export default function SignIn() {
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const params = useLocalSearchParams<{ code?: string; error_description?: string }>();
+  const usedCode = useRef<string | null>(null);
+
+  // Llegamos aquí desde el enlace del correo
+  useEffect(() => {
+    if (params.error_description) setError(t.login.error(String(params.error_description)));
+    const code = params.code ? String(params.code) : '';
+    if (!code || usedCode.current === code) return;
+    usedCode.current = code;
+    setBusy(true);
+    api
+      .signInFromLink(code)
+      .catch((e) => setError(t.login.error(e instanceof Error ? e.message : String(e))))
+      .finally(() => setBusy(false));
+  }, [params.code, params.error_description, t]);
 
   if (state.userId) return <Redirect href="/" />;
 
@@ -89,6 +104,9 @@ export default function SignIn() {
           ) : (
             <View style={{ gap: space(3) }}>
               <T style={{ textAlign: 'center' }}>{t.login.codeSent(cleanEmail)}</T>
+              <T variant="small" style={{ textAlign: 'center' }}>
+                {t.login.orCode}
+              </T>
               <TextInput
                 placeholder={t.login.code}
                 placeholderTextColor="#8b8b84"

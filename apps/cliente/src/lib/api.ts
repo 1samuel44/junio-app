@@ -1,5 +1,7 @@
 // Llamadas a Supabase. Las reglas (precios, sellos, recompensas) viven en el servidor:
 // aquí solo se leen datos y se llaman las funciones create_order e issue_qr_token.
+import * as Linking from 'expo-linking';
+
 import type { Menu } from '@/data/menu';
 import type { CartLine } from '@/lib/pricing';
 import type { Card } from '@/lib/rewards';
@@ -123,17 +125,31 @@ export async function saveLang(lang: 'es' | 'en', userId: string) {
   await db().from('profiles').update({ lang }).eq('id', userId);
 }
 
-// ---------- Inicio de sesión con código por correo ----------
+// ---------- Inicio de sesión por correo ----------
+// El correo trae un enlace que abre la app en /entrar?code=... (y un código de 6 dígitos
+// cuando haya SMTP propio y la plantilla incluya {{ .Token }}).
+
+/** Dirección a la que regresa el enlace del correo: junio://entrar, o exp://.../--/entrar en Expo Go. */
+export const authRedirectUrl = () => Linking.createURL('/entrar');
 export async function sendCode(email: string, fullName: string) {
   const { error } = await db().auth.signInWithOtp({
     email,
-    options: { shouldCreateUser: true, data: fullName ? { full_name: fullName } : undefined },
+    options: {
+      shouldCreateUser: true,
+      emailRedirectTo: authRedirectUrl(),
+      data: fullName ? { full_name: fullName } : undefined,
+    },
   });
   if (error) throw new Error(error.message);
 }
 
 export async function verifyCode(email: string, token: string) {
   const { error } = await db().auth.verifyOtp({ email, token, type: 'email' });
+  if (error) throw new Error(error.message);
+}
+
+export async function signInFromLink(code: string) {
+  const { error } = await db().auth.exchangeCodeForSession(code);
   if (error) throw new Error(error.message);
 }
 

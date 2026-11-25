@@ -13,6 +13,8 @@ export const supabase: SupabaseClient | null = LIVE
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,
+        // El enlace del correo regresa a la app con ?code=..., que se cambia por la sesión (entrar.tsx)
+        flowType: 'pkce',
       },
     })
   : null;
