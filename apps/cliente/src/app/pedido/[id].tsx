@@ -1,5 +1,6 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 
 import { LineSummary } from '@/components/LineSummary';
 import { Button, Card, T } from '@/components/ui';
@@ -11,9 +12,23 @@ const STEPS: OrderStatus[] = ['recibido', 'preparando', 'listo', 'entregado'];
 
 export default function OrderDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { state, t, dispatch, live } = useStore();
+  const { state, t, dispatch, live, payOrder } = useStore();
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState('');
   const order = state.orders.find((o) => o.id === id);
   if (!order) return null;
+  const awaitingPayment = live && order.method === 'app' && order.status === 'esperando_pago';
+  const pay = async () => {
+    setPaying(true);
+    setPayError('');
+    try {
+      await payOrder(order.id);
+    } catch (e) {
+      setPayError(t.payError(e instanceof Error ? e.message : String(e)));
+    } finally {
+      setPaying(false);
+    }
+  };
   const step = STEPS.indexOf(order.status);
 
   return (
@@ -31,6 +46,22 @@ export default function OrderDetail() {
           </T>
         )}
       </View>
+
+      {awaitingPayment && (
+        <Card tone="crema" style={{ gap: space(3) }}>
+          <T style={{ textAlign: 'center' }}>{t.payPending}</T>
+          {paying ? (
+            <ActivityIndicator color={colors.negro} />
+          ) : (
+            <Button title={t.payNow(money(order.totals.total))} onPress={pay} />
+          )}
+          {!!payError && (
+            <T variant="small" style={{ textAlign: 'center', color: colors.alerta }}>
+              {payError}
+            </T>
+          )}
+        </Card>
+      )}
 
       <View style={styles.steps}>
         {STEPS.map((s, i) => (

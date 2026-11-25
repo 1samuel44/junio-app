@@ -219,6 +219,7 @@ interface Ctx {
   dispatch: (a: Action) => void;
   /** Envía el pedido. Devuelve el id del pedido creado. */
   placeOrder: (method: PaymentMethod, note: string) => Promise<string>;
+  payOrder: (orderId: string) => Promise<void>;
   refresh: () => Promise<void>;
   setLang: (lang: Lang) => void;
 }
@@ -308,7 +309,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const id = await api.createOrder(s.cart, method, usesReward, note);
       dispatch({ type: 'clearCart' });
       await refresh();
+      if (method === 'app') {
+        // Si el pago falla o se cierra, el pedido queda "Esperando pago" y se reintenta desde su pantalla
+        await api.payOrder(id).catch((e) => console.warn('[junio] pago no iniciado:', e));
+        await refresh();
+      }
       return id;
+    },
+    [refresh],
+  );
+
+  const payOrder = useCallback(
+    async (orderId: string) => {
+      try {
+        await api.payOrder(orderId);
+      } finally {
+        await refresh();
+      }
     },
     [refresh],
   );
@@ -320,8 +337,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ state, dispatch, t: strings[state.lang], live: LIVE, placeOrder, refresh, setLang }),
-    [state, placeOrder, refresh, setLang],
+    () => ({ state, dispatch, t: strings[state.lang], live: LIVE, placeOrder, payOrder, refresh, setLang }),
+    [state, placeOrder, payOrder, refresh, setLang],
   );
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

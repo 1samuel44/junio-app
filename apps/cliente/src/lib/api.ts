@@ -1,6 +1,7 @@
 // Llamadas a Supabase. Las reglas (precios, sellos, recompensas) viven en el servidor:
 // aquí solo se leen datos y se llaman las funciones create_order e issue_qr_token.
 import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
 
 import type { Menu } from '@/data/menu';
 import type { CartLine } from '@/lib/pricing';
@@ -117,6 +118,23 @@ export async function createOrder(lines: CartLine[], method: PaymentMethod, rewa
       p_note: note || null,
     }),
   ) as string;
+}
+
+// ---------- Pagar en la app (Mercado Pago Checkout Pro) ----------
+// El servidor crea el cobro por el total del pedido; la app solo abre la página de pago.
+// Se marca pagado cuando Mercado Pago avisa al webhook, no cuando regresa el navegador.
+
+/** Abre el pago de Mercado Pago y espera a que el cliente regrese a la app. */
+export async function payOrder(orderId: string): Promise<void> {
+  const returnUrl = Linking.createURL(`/pedido/${orderId}`);
+  const { data, error } = await db().functions.invoke('mp-crear-pago', { body: { order_id: orderId, return_url: returnUrl } });
+  if (error) {
+    const detail = await (error as { context?: Response }).context?.json?.().catch(() => null);
+    throw new Error(detail?.error ?? error.message);
+  }
+  const url = (data as { url?: string } | null)?.url;
+  if (!url) throw new Error('Mercado Pago no regresó el enlace de pago');
+  await WebBrowser.openAuthSessionAsync(url, returnUrl);
 }
 
 export async function issueQrToken(): Promise<string> {
