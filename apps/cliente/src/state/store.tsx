@@ -96,8 +96,11 @@ const NEXT: Partial<Record<OrderStatus, OrderStatus>> = {
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
-    case 'hydrate':
-      return { ...state, ...action.saved };
+    case 'hydrate': {
+      // Con Supabase solo se guarda idioma y carrito; lo demás siempre viene del servidor
+      const saved = LIVE ? { lang: action.saved.lang ?? state.lang, cart: action.saved.cart ?? state.cart } : action.saved;
+      return { ...state, ...saved };
+    }
     case 'lang':
       return { ...state, lang: action.lang };
     case 'add': {
@@ -249,7 +252,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!supabase) return;
     const apply = (s: Session | null) => dispatch({ type: 'session', userId: s?.user.id, email: s?.user.email });
     supabase.auth.getSession().then(({ data }) => apply(data.session));
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => apply(s));
+    const { data } = supabase.auth.onAuthStateChange((event, s) => {
+      apply(s);
+      // Al entrar o renovar la sesión, volver a pedir tarjeta y pedidos con la sesión nueva
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') setTimeout(() => refreshRef.current(), 500);
+    });
     return () => data.subscription.unsubscribe();
   }, []);
 
@@ -260,8 +267,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       jobs.push(api.fetchCard().then((card) => dispatch({ type: 'card', card, now: Date.now() })));
       jobs.push(api.fetchOrders().then((orders) => dispatch({ type: 'orders', orders })));
     }
-    await Promise.allSettled(jobs);
+    const results = await Promise.allSettled(jobs);
+    for (const r of results) if (r.status === 'rejected') console.warn('[junio] no se pudieron cargar datos:', r.reason);
   }, []);
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
 
   // Datos del servidor y cambios en tiempo real (estado del pedido, sellos de la barra)
   const userId = state.userId;

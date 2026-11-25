@@ -26,6 +26,8 @@ function Navigator() {
           headerTintColor: colors.negro,
           headerTitleStyle: { fontFamily: fonts.bold },
           headerShadowVisible: false,
+          // Solo la flecha para regresar (si no, iOS muestra el nombre interno "(tabs)")
+          headerBackButtonDisplayMode: 'minimal',
           contentStyle: { backgroundColor: colors.hueso },
         }}
       >
