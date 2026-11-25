@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "Junio",
+    "slug": "junio",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "mx.junioycafe.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F1EDE6",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "mx.junioycafe.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/logo-negro.png",
+          "imageWidth": 180,
+          "backgroundColor": "#F1EDE6"
+        }
+      ]
+    ],
+    "scheme": "junio",
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

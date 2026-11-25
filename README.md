@@ -8,12 +8,24 @@ App de Junio y Café (San José del Cabo) para iOS y Android: menú, pedidos par
 
 | Carpeta | Qué hay |
 |---|---|
-| `apps/cliente/` | App para clientes (React Native + Expo, TypeScript). *Por crear en la fase 4.* |
+| `apps/cliente/` | App para clientes (React Native + Expo, TypeScript). Ver `apps/cliente/README.md`. |
 | `apps/panel/` | Panel del dueño y "modo barra" para baristas (Next.js). *Por crear en la fase 4.* |
-| `supabase/esquema.sql` | Esquema de base de datos con las reglas de lealtad aplicadas en el servidor. |
-| `supabase/tests/` | Pruebas de las reglas (probadas en Postgres 16). |
+| `supabase/migrations/` | Base de datos: esquema con las reglas de lealtad y el menú inicial. Supabase las aplica solo al aprobar cambios en `main`. |
+| `supabase/tests/` | Pruebas de las reglas y del menú inicial (Postgres 16). |
+| `supabase/config.jsonc` | Configuración de Supabase CLI. |
 | `docs/diseno/junio-prototipo.html` | Prototipo clicable de la fase 2. |
 | `assets/marca/` | Logos (SVG/PNG), páginas del menú y `menu.csv` (33 productos). |
+
+## Base de datos
+
+Supabase está conectado a este repositorio: al aprobar un cambio en `main`, aplica solo las migraciones nuevas de `supabase/migrations/`. Para cambiar la base de datos se agrega un archivo nuevo ahí; nunca se edita uno que ya se aplicó.
+
+Probar en un Postgres local (ver `supabase/tests/`):
+
+```bash
+cat supabase/tests/prueba-stub-auth.sql supabase/migrations/20261125120000_esquema_inicial.sql supabase/tests/prueba-reglas.sql | psql -d prueba
+cat supabase/tests/prueba-stub-auth.sql supabase/migrations/*.sql supabase/tests/prueba-menu.sql | psql -d prueba2
+```
 
 ## Tecnología
 
