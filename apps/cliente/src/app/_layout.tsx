@@ -30,6 +30,7 @@ function Navigator() {
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="entrar" options={{ headerShown: false }} />
         <Stack.Screen name="producto/[id]" options={{ presentation: 'modal', title: '' }} />
         <Stack.Screen name="carrito" options={{ title: t.cart }} />
         <Stack.Screen name="pedido/[id]" options={{ title: '' }} />

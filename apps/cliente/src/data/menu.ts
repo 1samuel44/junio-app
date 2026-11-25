@@ -1,6 +1,6 @@
-// Menú de prueba, tomado de assets/marca/menu.csv.
-// Usa la misma forma que las tablas menu_categories, menu_items e item_options
-// de supabase/esquema.sql, para que en la etapa 2 solo cambie de dónde viene.
+// Menú local, tomado de assets/marca/menu.csv. Se usa en la versión de prueba
+// (sin Supabase) y para generar supabase/migrations/*_menu_inicial.sql.
+// Tiene la misma forma que las tablas menu_categories, menu_items e item_options.
 
 export type OptionKind = 'tamano' | 'leche' | 'extra';
 
@@ -151,8 +151,16 @@ function buildOptions(): ItemOption[] {
 
 export const options: ItemOption[] = buildOptions();
 
-export const optionsFor = (itemId: number) => options.filter((o) => o.item_id === itemId);
-export const itemById = (id: number) => items.find((i) => i.id === id);
+export interface Menu {
+  categories: MenuCategory[];
+  items: MenuItem[];
+  options: ItemOption[];
+}
+
+export const localMenu: Menu = { categories, items, options };
+
+export const optionsFor = (menu: Menu, itemId: number) => menu.options.filter((o) => o.item_id === itemId);
+export const itemById = (menu: Menu, id: number) => menu.items.find((i) => i.id === id);
 
 // Café invitado del mes (tabla guest_beans). Dato de ejemplo hasta que el dueño lo cargue.
 export const guestBeans = {

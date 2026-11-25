@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { StampCard } from '@/components/StampCard';
 import { Button, Card, Logo, Pill, T } from '@/components/ui';
-import { guestBeans } from '@/data/menu';
 import { pick } from '@/lib/i18n';
 import { activeStamps, openRewards } from '@/lib/rewards';
 import { isOpen, nextOpening } from '@/lib/time';
@@ -26,7 +25,7 @@ export default function Home() {
         <View style={styles.header}>
           <Logo size={72} />
           <View style={{ flex: 1 }}>
-            <T variant="display">{t.slogan}</T>
+            <T variant="display">{state.name ? `${t.hello}, ${state.name.split(' ')[0]}` : t.slogan}</T>
             <View style={styles.statusRow}>
               <View style={[styles.dot, { backgroundColor: open ? colors.ok : colors.alerta }]} />
               <T variant="small">{open ? t.open : `${t.closed} · ${t.opensAt(day, next.hour)}`}</T>
@@ -55,14 +54,16 @@ export default function Home() {
 
         <Button title={t.orderNow} onPress={() => router.navigate('/menu')} />
 
-        <Card tone="salviaClaro">
-          <Pill label={t.guestBeans} tone="hueso" />
-          <T variant="title" style={{ marginTop: space(3) }}>
-            {guestBeans.roaster}
-          </T>
-          <T variant="small">{guestBeans.origin}</T>
-          <T style={{ marginTop: space(2) }}>{pick(guestBeans, 'notes', state.lang)}</T>
-        </Card>
+        {state.beans && (
+          <Card tone="salviaClaro">
+            <Pill label={t.guestBeans} tone="hueso" />
+            <T variant="title" style={{ marginTop: space(3) }}>
+              {state.beans.roaster}
+            </T>
+            <T variant="small">{state.beans.origin}</T>
+            <T style={{ marginTop: space(2) }}>{pick(state.beans, 'notes', state.lang)}</T>
+          </Card>
+        )}
 
         <View style={{ alignItems: 'center', gap: 4, paddingVertical: space(4) }}>
           <T variant="small">{t.hours}</T>

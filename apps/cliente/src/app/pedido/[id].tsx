@@ -11,8 +11,8 @@ const STEPS: OrderStatus[] = ['recibido', 'preparando', 'listo', 'entregado'];
 
 export default function OrderDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { state, t, dispatch } = useStore();
-  const order = state.orders.find((o) => o.number === Number(id));
+  const { state, t, dispatch, live } = useStore();
+  const order = state.orders.find((o) => o.id === id);
   if (!order) return null;
   const step = STEPS.indexOf(order.status);
 
@@ -46,7 +46,7 @@ export default function OrderDetail() {
       <Card>
         {order.lines.map((l, i) => (
           <View key={l.key} style={{ paddingVertical: space(2) }}>
-            <LineSummary line={l} lang={state.lang} isReward={i === order.totals.rewardLine && !!order.rewardId} freeLabel={t.free} />
+            <LineSummary menu={state.menu} line={l} lang={state.lang} isReward={i === order.totals.rewardLine && !!order.rewardId} freeLabel={t.free} />
           </View>
         ))}
         {order.totals.discount > 0 && (
@@ -62,7 +62,7 @@ export default function OrderDetail() {
         {!!order.note && <T variant="small">“{order.note}”</T>}
       </Card>
 
-      {order.status !== 'entregado' && (
+      {!live && order.status !== 'entregado' && (
         <Card tone="crema" style={{ gap: space(2) }}>
           <T variant="label">{t.demo}</T>
           <T variant="small">{t.demoHint}</T>

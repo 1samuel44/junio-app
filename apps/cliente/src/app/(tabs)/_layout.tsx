@@ -1,5 +1,5 @@
 import Feather from '@expo/vector-icons/Feather';
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 
 import { useStore } from '@/state/store';
 import { colors, fonts } from '@/theme';
@@ -12,8 +12,10 @@ const icon =
   );
 
 export default function TabsLayout() {
-  const { t, state } = useStore();
+  const { t, state, live } = useStore();
   const count = state.cart.reduce((n, l) => n + l.qty, 0);
+  if (!state.authReady) return null;
+  if (live && !state.userId) return <Redirect href="/entrar" />;
   return (
     <Tabs
       screenOptions={{

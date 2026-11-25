@@ -2,12 +2,13 @@ import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Card, Logo, T } from '@/components/ui';
+import * as api from '@/lib/api';
 import type { Lang } from '@/lib/i18n';
 import { useStore } from '@/state/store';
 import { colors, fonts, radius, space } from '@/theme';
 
 export default function Profile() {
-  const { state, t, dispatch } = useStore();
+  const { state, t, dispatch, live, setLang } = useStore();
   const langs: Array<[Lang, string]> = [
     ['es', 'Español'],
     ['en', 'English'],
@@ -21,8 +22,8 @@ export default function Profile() {
         <Card style={{ flexDirection: 'row', alignItems: 'center', gap: space(4) }}>
           <Logo size={48} tone="oliva" />
           <View style={{ flex: 1 }}>
-            <T variant="title">{t.guest}</T>
-            <T variant="small">{t.signInSoon}</T>
+            <T variant="title">{state.name || (live ? state.email : t.guest)}</T>
+            <T variant="small">{live ? (state.name ? state.email : '') : t.signInSoon}</T>
           </View>
         </Card>
 
@@ -32,7 +33,7 @@ export default function Profile() {
             {langs.map(([code, label]) => (
               <Pressable
                 key={code}
-                onPress={() => dispatch({ type: 'lang', lang: code })}
+                onPress={() => setLang(code)}
                 style={[styles.seg, state.lang === code && styles.segOn]}
               >
                 <T style={[{ fontFamily: fonts.semibold }, state.lang === code && { color: colors.hueso }]}>{label}</T>
@@ -52,10 +53,14 @@ export default function Profile() {
           </Pressable>
         </Card>
 
-        <Card tone="crema" style={{ gap: space(2) }}>
-          <T variant="label">{t.demo}</T>
-          <Button title={t.demoReset} kind="ghost" onPress={() => dispatch({ type: 'reset' })} />
-        </Card>
+        {live ? (
+          <Button title={t.signOut} kind="ghost" onPress={() => api.signOut()} />
+        ) : (
+          <Card tone="crema" style={{ gap: space(2) }}>
+            <T variant="label">{t.demo}</T>
+            <Button title={t.demoReset} kind="ghost" onPress={() => dispatch({ type: 'reset' })} />
+          </Card>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

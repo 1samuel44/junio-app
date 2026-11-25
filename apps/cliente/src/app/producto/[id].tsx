@@ -12,13 +12,13 @@ import { colors, fonts, radius, space } from '@/theme';
 export default function Product() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { state, t, dispatch } = useStore();
-  const item = itemById(Number(id));
-  const [selected, setSelected] = useState<number[]>(() => defaultOptionIds(Number(id)));
+  const item = itemById(state.menu, Number(id));
+  const [selected, setSelected] = useState<number[]>(() => defaultOptionIds(state.menu, Number(id)));
   const [qty, setQty] = useState(1);
 
   if (!item) return null;
   const lang = state.lang;
-  const opts = optionsFor(item.id);
+  const opts = optionsFor(state.menu, item.id);
   const groups: Array<[OptionKind, string]> = [
     ['tamano', t.choose],
     ['leche', t.milk],
@@ -34,7 +34,7 @@ export default function Product() {
     });
   };
 
-  const price = unitPrice(item, selected) * qty;
+  const price = unitPrice(state.menu, item, selected) * qty;
   const desc = pick(item, 'desc', lang);
 
   return (

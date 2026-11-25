@@ -1,57 +1,82 @@
-// Estado de la app de prueba: idioma, carrito, tarjeta y pedidos.
-// Se guarda en el teléfono. En la etapa 2 la tarjeta y los pedidos vendrán de Supabase.
+// Estado de la app: idioma, carrito, menú, tarjeta y pedidos.
+//
+// Con Supabase configurado (LIVE), el menú, la tarjeta y los pedidos vienen del servidor
+// y se actualizan solos en tiempo real. Sin Supabase, la app corre en "versión de prueba":
+// todo se guarda en el teléfono y hay botones para simular la barra.
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, useContext, useEffect, useMemo, useReducer, useRef, type ReactNode } from 'react';
+import type { Session } from '@supabase/supabase-js';
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, type ReactNode } from 'react';
+import { AppState } from 'react-native';
 
+import { guestBeans as localBeans, localMenu, type Menu } from '@/data/menu';
+import * as api from '@/lib/api';
+import { LIVE } from '@/lib/config';
 import { strings, type Lang, type Strings } from '@/lib/i18n';
-import { cartTotals, type CartLine, type Totals } from '@/lib/pricing';
-import { awardStamp, emptyCard, openRewards, redeemReward, type AwardResult, type Card } from '@/lib/rewards';
+import { availableLines, cartTotals, type CartLine } from '@/lib/pricing';
+import {
+  activeStamps,
+  awardStamp,
+  emptyCard,
+  openRewards,
+  redeemReward,
+  type AwardResult,
+  type Card,
+} from '@/lib/rewards';
+import { supabase } from '@/lib/supabase';
 
-export type OrderStatus = 'esperando_pago' | 'recibido' | 'preparando' | 'listo' | 'entregado' | 'cancelado';
-export type PaymentMethod = 'app' | 'barra';
+import type { GuestBeans, Order, OrderStatus, PaymentMethod } from './types';
 
-export interface Order {
-  id: string;
-  number: number;
-  lines: CartLine[];
-  totals: Totals;
-  method: PaymentMethod;
-  status: OrderStatus;
-  isPaid: boolean;
-  rewardId?: string;
-  note: string;
-  createdAt: number;
-}
+export type { Order, OrderStatus, PaymentMethod } from './types';
 
 interface State {
   lang: Lang;
   cart: CartLine[];
   useReward: boolean;
+  menu: Menu;
+  beans: GuestBeans | null;
   card: Card;
   orders: Order[];
-  nextNumber: number;
+  nextNumber: number; // solo versión de prueba
   notice?: AwardResult;
+  // sesión (solo con Supabase)
+  authReady: boolean;
+  userId?: string;
+  email?: string;
+  name?: string;
+  cardLoaded: boolean;
 }
 
 const initialState = (): State => ({
   lang: 'es',
   cart: [],
   useReward: false,
-  card: awardStamp(emptyCard(), 'bienvenida', Date.now()).card, // sello de bienvenida
+  menu: localMenu,
+  beans: LIVE ? null : localBeans,
+  card: LIVE ? emptyCard() : awardStamp(emptyCard(), 'bienvenida', Date.now()).card, // sello de bienvenida
   orders: [],
   nextNumber: 101,
+  authReady: !LIVE,
+  cardLoaded: !LIVE,
 });
 
 type Action =
-  | { type: 'hydrate'; state: State }
+  | { type: 'hydrate'; saved: Partial<State> }
   | { type: 'lang'; lang: Lang }
   | { type: 'add'; line: Omit<CartLine, 'key'> }
   | { type: 'qty'; key: string; delta: number }
   | { type: 'useReward'; value: boolean }
+  | { type: 'clearCart' }
+  | { type: 'dismissNotice' }
+  // Supabase
+  | { type: 'session'; userId?: string; email?: string }
+  | { type: 'menu'; menu: Menu; beans: GuestBeans | null }
+  | { type: 'card'; card: Card; now: number }
+  | { type: 'orders'; orders: Order[] }
+  | { type: 'name'; name: string }
+  // versión de prueba
   | { type: 'place'; method: PaymentMethod; note: string; now: number }
   | { type: 'advance'; orderId: string; now: number }
   | { type: 'scan'; now: number }
-  | { type: 'dismissNotice' }
   | { type: 'reset' };
 
 const sameLine = (a: Omit<CartLine, 'key'>, b: CartLine) =>
@@ -72,13 +97,16 @@ const NEXT: Partial<Record<OrderStatus, OrderStatus>> = {
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'hydrate':
-      return action.state;
+      return { ...state, ...action.saved };
     case 'lang':
       return { ...state, lang: action.lang };
     case 'add': {
       const existing = state.cart.find((l) => sameLine(action.line, l));
       if (existing) {
-        return { ...state, cart: state.cart.map((l) => (l === existing ? { ...l, qty: Math.min(20, l.qty + action.line.qty) } : l)) };
+        return {
+          ...state,
+          cart: state.cart.map((l) => (l === existing ? { ...l, qty: Math.min(20, l.qty + action.line.qty) } : l)),
+        };
       }
       return { ...state, cart: [...state.cart, { ...action.line, key: `${Date.now()}-${state.cart.length}` }] };
     }
@@ -91,9 +119,44 @@ function reducer(state: State, action: Action): State {
       };
     case 'useReward':
       return { ...state, useReward: action.value };
+    case 'clearCart':
+      return { ...state, cart: [], useReward: false };
+    case 'dismissNotice':
+      return { ...state, notice: undefined };
+
+    case 'session':
+      if (action.userId === state.userId) return { ...state, authReady: true, email: action.email };
+      return {
+        ...state,
+        authReady: true,
+        userId: action.userId,
+        email: action.email,
+        name: undefined,
+        card: emptyCard(),
+        orders: [],
+        cardLoaded: false,
+      };
+    case 'menu':
+      return { ...state, menu: action.menu, beans: action.beans, cart: availableLines(action.menu, state.cart) };
+    case 'card': {
+      // Avisar cuando la barra da un sello o se completa la tarjeta
+      let notice = state.notice;
+      if (state.cardLoaded) {
+        const before = openRewards(state.card, action.now).length;
+        const after = openRewards(action.card, action.now).length;
+        if (after > before) notice = 'recompensa';
+        else if (activeStamps(action.card, action.now) > activeStamps(state.card, action.now)) notice = 'otorgado';
+      }
+      return { ...state, card: action.card, cardLoaded: true, notice };
+    }
+    case 'orders':
+      return { ...state, orders: action.orders };
+    case 'name':
+      return { ...state, name: action.name };
+
     case 'place': {
       const reward = state.useReward ? openRewards(state.card, action.now)[0] : undefined;
-      const totals = cartTotals(state.cart, !!reward);
+      const totals = cartTotals(state.menu, state.cart, !!reward);
       const applied = reward && totals.rewardLine >= 0 ? reward : undefined;
       const free = totals.total === 0;
       const order: Order = {
@@ -133,30 +196,43 @@ function reducer(state: State, action: Action): State {
     }
     case 'scan':
       return giveStamp(state, action.now, 'escaneo');
-    case 'dismissNotice':
-      return { ...state, notice: undefined };
     case 'reset':
       return { ...initialState(), lang: state.lang };
   }
 }
 
+// Qué se guarda en el teléfono
+const KEY = LIVE ? 'junio-estado-live-v1' : 'junio-estado-v1';
+function persisted(s: State): Partial<State> {
+  if (LIVE) return { lang: s.lang, cart: s.cart };
+  const { lang, cart, useReward, card, orders, nextNumber } = s;
+  return { lang, cart, useReward, card, orders, nextNumber };
+}
+
 interface Ctx {
   state: State;
   t: Strings;
+  live: boolean;
   dispatch: (a: Action) => void;
+  /** Envía el pedido. Devuelve el id del pedido creado. */
+  placeOrder: (method: PaymentMethod, note: string) => Promise<string>;
+  refresh: () => Promise<void>;
+  setLang: (lang: Lang) => void;
 }
 
 const StoreContext = createContext<Ctx | null>(null);
-const KEY = 'junio-estado-v1';
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
   const hydrated = useRef(false);
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
+  // Cargar lo guardado en el teléfono
   useEffect(() => {
     AsyncStorage.getItem(KEY)
       .then((raw) => {
-        if (raw) dispatch({ type: 'hydrate', state: { ...JSON.parse(raw), notice: undefined } });
+        if (raw) dispatch({ type: 'hydrate', saved: JSON.parse(raw) });
       })
       .catch(() => {})
       .finally(() => {
@@ -165,10 +241,78 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (hydrated.current) AsyncStorage.setItem(KEY, JSON.stringify(state)).catch(() => {});
+    if (hydrated.current) AsyncStorage.setItem(KEY, JSON.stringify(persisted(state))).catch(() => {});
   }, [state]);
 
-  const value = useMemo(() => ({ state, dispatch, t: strings[state.lang] }), [state]);
+  // Sesión de Supabase
+  useEffect(() => {
+    if (!supabase) return;
+    const apply = (s: Session | null) => dispatch({ type: 'session', userId: s?.user.id, email: s?.user.email });
+    supabase.auth.getSession().then(({ data }) => apply(data.session));
+    const { data } = supabase.auth.onAuthStateChange((_e, s) => apply(s));
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  const refresh = useCallback(async () => {
+    if (!LIVE) return;
+    const jobs: Promise<unknown>[] = [api.fetchMenu().then((m) => dispatch({ type: 'menu', ...m }))];
+    if (stateRef.current.userId) {
+      jobs.push(api.fetchCard().then((card) => dispatch({ type: 'card', card, now: Date.now() })));
+      jobs.push(api.fetchOrders().then((orders) => dispatch({ type: 'orders', orders })));
+    }
+    await Promise.allSettled(jobs);
+  }, []);
+
+  // Datos del servidor y cambios en tiempo real (estado del pedido, sellos de la barra)
+  const userId = state.userId;
+  useEffect(() => {
+    if (!supabase) return;
+    refresh();
+    if (!userId) return;
+    api.fetchProfileName().then((name) => dispatch({ type: 'name', name })).catch(() => {});
+    const filter = `customer_id=eq.${userId}`;
+    const channel = supabase
+      .channel(`cliente-${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter }, () => refresh())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stamps', filter }, () => refresh())
+      .subscribe();
+    const sub = AppState.addEventListener('change', (s) => s === 'active' && refresh());
+    const poll = setInterval(refresh, 60_000); // respaldo por si se pierde la conexión en tiempo real
+    return () => {
+      supabase?.removeChannel(channel);
+      sub.remove();
+      clearInterval(poll);
+    };
+  }, [userId, refresh]);
+
+  const placeOrder = useCallback(
+    async (method: PaymentMethod, note: string) => {
+      const s = stateRef.current;
+      const now = Date.now();
+      if (!LIVE) {
+        dispatch({ type: 'place', method, note, now });
+        return `o-${now}`;
+      }
+      const reward = s.useReward ? openRewards(s.card, now)[0] : undefined;
+      const usesReward = reward && cartTotals(s.menu, s.cart, true).rewardLine >= 0 ? reward.id : undefined;
+      const id = await api.createOrder(s.cart, method, usesReward, note);
+      dispatch({ type: 'clearCart' });
+      await refresh();
+      return id;
+    },
+    [refresh],
+  );
+
+  const setLang = useCallback((lang: Lang) => {
+    dispatch({ type: 'lang', lang });
+    const uid = stateRef.current.userId;
+    if (LIVE && uid) api.saveLang(lang, uid).catch(() => {});
+  }, []);
+
+  const value = useMemo(
+    () => ({ state, dispatch, t: strings[state.lang], live: LIVE, placeOrder, refresh, setLang }),
+    [state, placeOrder, refresh, setLang],
+  );
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 
@@ -178,4 +322,4 @@ export function useStore(): Ctx {
   return ctx;
 }
 
-export { reducer as _reducerForTests, initialState as _initialStateForTests };
+export { initialState as _initialStateForTests, reducer as _reducerForTests };

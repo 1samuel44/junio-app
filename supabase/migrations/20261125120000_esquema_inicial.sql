@@ -12,7 +12,9 @@
 -- Los precios y totales se calculan aquí, nunca se confían a la app.
 -- =====================================================================
 
-create extension if not exists pgcrypto;
+-- En Supabase pgcrypto vive en el esquema "extensions".
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
 
 -- ---------- Tipos -----------------------------------------------------
 create type user_role       as enum ('cliente', 'barista', 'dueno');
@@ -121,7 +123,7 @@ create unique index stamps_one_welcome on stamps (customer_id) where source = 'b
 
 -- QR rotativo de la tarjeta: token de un solo uso que vence a los 60 s
 create table qr_tokens (
-  token        text primary key default encode(gen_random_bytes(16), 'hex'),
+  token        text primary key default encode(extensions.gen_random_bytes(16), 'hex'),
   customer_id  uuid not null references profiles (id) on delete cascade,
   expires_at   timestamptz not null default now() + interval '60 seconds',
   used_at      timestamptz
@@ -383,5 +385,10 @@ create policy lineas_leer     on order_items for select using (
 
 -- qr_tokens: sin políticas = nadie lee la tabla directo; solo las funciones
 
--- Tiempo real: la barra escucha pedidos nuevos y el cliente su estado
--- alter publication supabase_realtime add table orders;
+-- Tiempo real: la barra escucha pedidos nuevos; el cliente, el estado de su pedido
+-- y los sellos que le da la barra al escanear su QR. Respeta las reglas de arriba.
+do $$ begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    alter publication supabase_realtime add table orders, stamps;
+  end if;
+end $$;

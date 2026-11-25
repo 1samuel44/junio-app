@@ -1,4 +1,4 @@
-// Junio Rewards: misma lógica que award_stamp en supabase/esquema.sql.
+// Junio Rewards: misma lógica que award_stamp en supabase/migrations/*_esquema_inicial.sql.
 // Desde la etapa 2 decide el servidor; aquí sirve para la versión de prueba.
 import { localDay } from './time';
 

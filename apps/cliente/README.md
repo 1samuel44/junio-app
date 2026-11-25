@@ -2,19 +2,24 @@
 
 App de iOS y Android (React Native + Expo SDK 58, TypeScript, Expo Router).
 
-## Qué tiene (etapa 1)
+## Qué tiene
 
-- **Inicio:** horario y si está abierto ahora (hora de San José del Cabo), resumen de la tarjeta, Guest Beans.
-- **Menú:** los 30 productos de `assets/marca/menu.csv`, por categoría, con leches y extras.
-- **Producto:** elegir leche, extras y cantidad.
-- **Carrito:** usar la bebida gratis (aplica a una bebida de café, con tamaño y extras), pagar en la barra, nota para la barra. Fuera de horario no deja enviar.
-- **Pedido:** número corto y estado (recibido, preparando, listo, entregado).
-- **Junio Rewards:** 7 sellos + la 8ª gratis, QR que cambia cada 60 s, reglas.
-- **Perfil:** cambio de idioma español / inglés.
+- **Entrar:** con un código de 6 dígitos por correo, sin contraseñas. La cuenta nueva gana el sello de bienvenida.
+- **Inicio:** si está abierto ahora (hora de San José del Cabo), tu tarjeta y el Guest Beans del mes.
+- **Menú:** viene de Supabase (lo que edite el dueño). Lo agotado sale del carrito solo.
+- **Producto:** leche, extras y cantidad.
+- **Carrito:** usar la bebida gratis (una bebida de café, tamaño y extras incluidos), pagar en la barra, nota para la barra. Fuera de horario no deja enviar.
+- **Pedido:** número corto y estado, que se actualiza en tiempo real cuando la barra lo mueve.
+- **Junio Rewards:** 7 sellos + la 8ª gratis, QR de un solo uso que cambia cada 60 s (la barra lo escanea para dar el sello).
+- **Perfil:** español / inglés, cerrar sesión.
 
-Por ahora todo es **de prueba**: los datos se guardan en el teléfono y hay botones de "Versión de prueba" para simular la barra. En la etapa 2 se conecta a Supabase (`supabase/esquema.sql`) y esos botones se quitan. Pagar en la app (Mercado Pago) llega en la etapa 3.
+Pagar en la app (Mercado Pago) llega en la etapa 3.
 
-Las reglas de sellos y precios en `src/lib/` siguen las funciones del servidor (`award_stamp`, `create_order`), pero **el servidor siempre decide**.
+**El servidor decide todo:** precios, sellos y recompensas los calculan las funciones de `supabase/migrations/` (`create_order`, `award_stamp`, `scan_qr`, `issue_qr_token`). La app solo muestra.
+
+### Versión de prueba
+
+Con `EXPO_PUBLIC_DEMO=1` la app no usa Supabase: guarda todo en el teléfono y muestra botones para simular la barra. Sirve para probar la interfaz sin internet.
 
 ## Probarla
 
@@ -23,6 +28,7 @@ cd apps/cliente
 npm install
 npx expo start        # escanea el QR con la app Expo Go en tu teléfono
 npx expo start --web  # o ábrela en el navegador
+EXPO_PUBLIC_DEMO=1 npx expo start   # versión de prueba, sin Supabase
 ```
 
 ## Revisiones
@@ -38,9 +44,11 @@ npm run typecheck
 |---|---|
 | `src/app/` | Pantallas (cada archivo es una ruta de Expo Router) |
 | `src/components/` | Piezas de interfaz: botones, tarjeta de sellos, avisos |
-| `src/data/menu.ts` | Menú de prueba con la misma forma que las tablas de Supabase |
+| `src/data/menu.ts` | Menú local (versión de prueba y origen del menú inicial en Supabase) |
+| `src/lib/api.ts` | Llamadas a Supabase |
+| `src/lib/config.ts` | URL y publishable key de Supabase (públicas) |
 | `src/lib/` | Reglas: sellos, precios, horario, textos ES/EN |
-| `src/state/store.tsx` | Estado de la app (carrito, tarjeta, pedidos) |
+| `src/state/store.tsx` | Estado de la app: carrito, sesión, tarjeta y pedidos en tiempo real |
 | `src/theme.ts` | Colores y tipografía de la marca |
 
 Tipografía: Archivo (Google Fonts) mientras se confirma la licencia de Owners Text.

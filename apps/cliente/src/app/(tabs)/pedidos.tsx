@@ -34,7 +34,7 @@ export default function Orders() {
         }
         renderItem={({ item: o }) => (
           <Pressable
-            onPress={() => router.push({ pathname: '/pedido/[id]', params: { id: String(o.number) } })}
+            onPress={() => router.push({ pathname: '/pedido/[id]', params: { id: o.id } })}
             style={styles.row}
           >
             <View style={{ flex: 1, gap: 4 }}>

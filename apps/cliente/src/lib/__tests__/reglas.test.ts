@@ -1,8 +1,11 @@
-import { items, optionsFor } from '@/data/menu';
+import { items, localMenu as M, optionsFor } from '@/data/menu';
 import { cartTotals, defaultOptionIds } from '@/lib/pricing';
 import { activeStamps, awardStamp, emptyCard, openRewards, REWARD_EXPIRY_MS, STAMP_EXPIRY_MS } from '@/lib/rewards';
 import { isOpen, localDay, nextOpening } from '@/lib/time';
 import { _initialStateForTests as initial, _reducerForTests as reducer } from '@/state/store';
+
+// Estas pruebas usan la versión de prueba (sin Supabase)
+jest.mock('@/lib/config', () => ({ LIVE: false, SUPABASE_URL: '', SUPABASE_KEY: '' }));
 
 const DAY = 86_400_000;
 // Martes 25 nov 2026, 10:00 en San José del Cabo (17:00 UTC)
@@ -56,12 +59,12 @@ describe('Precios del carrito', () => {
   const latte = id('Latte');
 
   test('opciones suman al precio', () => {
-    const avena = optionsFor(latte).find((o) => o.name_es === 'Leche de avena')!.id;
-    const shot = optionsFor(latte).find((o) => o.name_es === 'Shot de espresso')!.id;
-    expect(cartTotals([{ key: 'a', itemId: latte, optionIds: defaultOptionIds(latte), qty: 2 }], false).subtotal).toBe(160);
-    expect(cartTotals([{ key: 'a', itemId: latte, optionIds: [avena, shot], qty: 1 }], false).subtotal).toBe(120);
+    const avena = optionsFor(M, latte).find((o) => o.name_es === 'Leche de avena')!.id;
+    const shot = optionsFor(M, latte).find((o) => o.name_es === 'Shot de espresso')!.id;
+    expect(cartTotals(M, [{ key: 'a', itemId: latte, optionIds: defaultOptionIds(M, latte), qty: 2 }], false).subtotal).toBe(160);
+    expect(cartTotals(M, [{ key: 'a', itemId: latte, optionIds: [avena, shot], qty: 1 }], false).subtotal).toBe(120);
     // con la bebida gratis, la leche y el shot también van gratis
-    expect(cartTotals([{ key: 'a', itemId: latte, optionIds: [avena, shot], qty: 1 }], true).total).toBe(0);
+    expect(cartTotals(M, [{ key: 'a', itemId: latte, optionIds: [avena, shot], qty: 1 }], true).total).toBe(0);
   });
 
   test('la bebida gratis aplica a una unidad de café con sus extras', () => {
@@ -72,14 +75,14 @@ describe('Precios del carrito', () => {
       { key: 'b', itemId: matcha, optionIds: [], qty: 1 },
       { key: 'c', itemId: latte, optionIds: [], qty: 2 },
     ];
-    const t = cartTotals(lines, true);
+    const t = cartTotals(M, lines, true);
     expect(t.rewardLine).toBe(2);
     expect(t.discount).toBe(80);
     expect(t.total).toBe(135 + 100 + 160 - 80);
   });
 
   test('sin bebida de café no hay descuento', () => {
-    const t = cartTotals([{ key: 'a', itemId: id('Chai'), optionIds: [], qty: 1 }], true);
+    const t = cartTotals(M, [{ key: 'a', itemId: id('Chai'), optionIds: [], qty: 1 }], true);
     expect(t.rewardLine).toBe(-1);
     expect(t.discount).toBe(0);
   });
@@ -118,4 +121,28 @@ describe('Pedidos (versión de prueba)', () => {
   function latte() {
     return id('Latte');
   }
+});
+
+describe('Tarjeta desde el servidor', () => {
+  const stamp = (d: number) => ({ source: 'escaneo' as const, createdAt: T0 + d, localDay: '2026-11-25' });
+
+  test('avisa cuando la barra da un sello o se completa la tarjeta', () => {
+    let s = { ...initial(), cardLoaded: false };
+    s = reducer(s, { type: 'card', card: { stamps: [stamp(0)], hadWelcome: true, rewards: [] }, now: T0 });
+    expect(s.notice).toBeUndefined(); // la primera carga no avisa
+    s = reducer(s, { type: 'card', card: { stamps: [stamp(0), stamp(1)], hadWelcome: true, rewards: [] }, now: T0 });
+    expect(s.notice).toBe('otorgado');
+    s = reducer(s, { type: 'dismissNotice' });
+    const reward = { id: 'r1', earnedAt: T0, expiresAt: T0 + REWARD_EXPIRY_MS };
+    s = reducer(s, { type: 'card', card: { stamps: [], hadWelcome: true, rewards: [reward] }, now: T0 });
+    expect(s.notice).toBe('recompensa');
+  });
+
+  test('un producto agotado sale del carrito al actualizar el menú', () => {
+    let s = initial();
+    s = reducer(s, { type: 'add', line: { itemId: id('Latte'), optionIds: [], qty: 1 } });
+    const menu = { ...M, items: M.items.map((i) => (i.name_es === 'Latte' ? { ...i, is_available: false } : i)) };
+    s = reducer(s, { type: 'menu', menu, beans: null });
+    expect(s.cart).toHaveLength(0);
+  });
 });

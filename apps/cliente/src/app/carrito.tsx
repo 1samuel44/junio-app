@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 
 import { LineSummary } from '@/components/LineSummary';
 import { Button, Card, T } from '@/components/ui';
@@ -11,12 +11,14 @@ import { useStore, type PaymentMethod } from '@/state/store';
 import { colors, fonts, radius, space } from '@/theme';
 
 export default function Cart() {
-  const { state, t, dispatch } = useStore();
+  const { state, t, dispatch, placeOrder } = useStore();
   const [method, setMethod] = useState<PaymentMethod>('barra');
   const [note, setNote] = useState('');
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
   const now = Date.now();
   const reward = openRewards(state.card, now)[0];
-  const totals = cartTotals(state.cart, state.useReward && !!reward);
+  const totals = cartTotals(state.menu, state.cart, state.useReward && !!reward);
   const open = isOpen(new Date(now));
 
   if (state.cart.length === 0) {
@@ -28,10 +30,16 @@ export default function Cart() {
     );
   }
 
-  const place = () => {
-    const number = state.nextNumber;
-    dispatch({ type: 'place', method, note: note.trim(), now: Date.now() });
-    router.replace({ pathname: '/pedido/[id]', params: { id: String(number) } });
+  const place = async () => {
+    setSending(true);
+    setError('');
+    try {
+      const id = await placeOrder(method, note.trim());
+      router.replace({ pathname: '/pedido/[id]', params: { id } });
+    } catch (e) {
+      setError(t.orderError(e instanceof Error ? e.message : String(e)));
+      setSending(false);
+    }
   };
 
   return (
@@ -40,7 +48,7 @@ export default function Cart() {
         <Card>
           {state.cart.map((l, i) => (
             <View key={l.key} style={[styles.line, i > 0 && styles.divider]}>
-              <LineSummary line={l} lang={state.lang} isReward={i === totals.rewardLine} freeLabel={t.free} />
+              <LineSummary menu={state.menu} line={l} lang={state.lang} isReward={i === totals.rewardLine} freeLabel={t.free} />
               <View style={styles.qty}>
                 <Pressable onPress={() => dispatch({ type: 'qty', key: l.key, delta: -1 })} hitSlop={8}>
                   <T style={styles.qtyBtn}>−</T>
@@ -91,9 +99,14 @@ export default function Cart() {
         </Card>
 
         {!open && <T variant="small" style={{ textAlign: 'center' }}>{t.closedNoOrders}</T>}
+        {!!error && <T variant="small" style={{ textAlign: 'center', color: colors.alerta }}>{error}</T>}
       </ScrollView>
       <View style={styles.footer}>
-        <Button title={`${t.placeOrder} · ${money(totals.total)}`} onPress={place} disabled={!open} />
+        {sending ? (
+          <ActivityIndicator color={colors.negro} size="large" />
+        ) : (
+          <Button title={`${t.placeOrder} · ${money(totals.total)}`} onPress={place} disabled={!open} />
+        )}
       </View>
     </View>
   );

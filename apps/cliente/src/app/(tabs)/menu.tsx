@@ -4,7 +4,7 @@ import { Pressable, ScrollView, SectionList, StyleSheet, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, T } from '@/components/ui';
-import { categories, items, type MenuItem } from '@/data/menu';
+import type { MenuItem } from '@/data/menu';
 import { pick } from '@/lib/i18n';
 import { cartTotals, money } from '@/lib/pricing';
 import { useStore } from '@/state/store';
@@ -14,17 +14,18 @@ export default function Menu() {
   const { state, t } = useStore();
   const [active, setActive] = useState<number | null>(null);
   const lang = state.lang;
+  const { categories, items } = state.menu;
 
   const sections = useMemo(
     () =>
       categories
         .filter((c) => active === null || c.id === active)
         .map((c) => ({ key: String(c.id), title: pick(c, 'name', lang), data: items.filter((i) => i.category_id === c.id) })),
-    [active, lang],
+    [active, lang, categories, items],
   );
 
   const count = state.cart.reduce((n, l) => n + l.qty, 0);
-  const totals = cartTotals(state.cart, false);
+  const totals = cartTotals(state.menu, state.cart, false);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
